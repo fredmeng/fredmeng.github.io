@@ -1,4 +1,4 @@
-const coords = [[-33.8674869,151.2069902,"<a href='https://www.google.com'>Sydney</a>"],
+const coords = [[-33.8674869,151.2069902,"Sydney"],
 [1.352083,103.819836,"Singapore"],
 [25.0329636,121.5654268,"Taipei"],
 [22.396428,114.109497,"Hong Kong"],
