@@ -1,2 +1,2 @@
 // use the map
-addMarkersAndSetViewBounds(map);
+addInfoBubble(map);
