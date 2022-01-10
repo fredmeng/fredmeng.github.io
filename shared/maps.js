@@ -51,6 +51,23 @@ coords.forEach((el)=> {
 
 }
 
+function addPolylineAndSetViewBounds(){
+  var lineString = new H.geo.LineString();
+
+  coords.forEach((el)=> {
+    lineString.pushPoint({lat:el[0],lng:el[1]});
+  })
+
+  map.addObject(new H.map.Polyline(
+    lineString, { style: { lineWidth: 4 }}
+  ));
+  
+  // get geo bounding box for the group and set it to the map
+  map.getViewModel().setLookAtData({
+    bounds: lineString.getBoundingBox()
+  });
+}
+
 function addPolylineToMap(){
   var lineString = new H.geo.LineString();
 
