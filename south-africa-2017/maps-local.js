@@ -1,3 +1,3 @@
 // use the map
-addPolylineToMap(map);
+//addPolylineToMap(map);
 addInfoBubble(map);
