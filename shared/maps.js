@@ -16,7 +16,7 @@ function addMarkersAndSetViewBounds() {
 
 
 function addMarkerToGroup(group, coordinate, html) {
-  var pngIcon = new H.map.Icon("https://fredmeng.github.io/shared/pin.png",{size:{w:48,h:48}});
+  var pngIcon = new H.map.Icon("https://fredmeng.github.io/shared/pin.png",{size:{w:20,h:20}});
   var marker = new H.map.Marker(coordinate,{icon:pngIcon});
   // add custom data to the marker
   marker.setData(html);
