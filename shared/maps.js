@@ -36,6 +36,7 @@ function addInfoBubble(map) {
       // read custom data
       content: evt.target.getData()
     });
+    ui.getBubbles().forEach(bubble => ui.removeBubble(bubble));
     // show info bubble
     ui.addBubble(bubble);
   }, false);
