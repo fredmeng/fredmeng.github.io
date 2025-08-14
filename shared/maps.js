@@ -1,3 +1,12 @@
+function navMenu() {
+  var x = document.getElementById("nav-links");
+  if (x.style.display === "block") {
+    x.style.display = "none";
+  } else {
+    x.style.display = "block";
+  }
+}
+
 function addMarkersAndSetViewBounds() {
   var group = new H.map.Group();
   var pngIcon = new H.map.Icon("https://latitude900.com/shared/pin.png",{size:{w:20,h:20}});
