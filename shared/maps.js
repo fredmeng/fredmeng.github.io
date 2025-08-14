@@ -1,6 +1,6 @@
 function addMarkersAndSetViewBounds() {
   var group = new H.map.Group();
-  var pngIcon = new H.map.Icon("https://fredmeng.github.io/shared/pin.png",{size:{w:20,h:20}});
+  var pngIcon = new H.map.Icon("https://latitude900.com/shared/pin.png",{size:{w:20,h:20}});
 
   // add markers to the group
   coords.forEach((el)=> {
@@ -16,7 +16,7 @@ function addMarkersAndSetViewBounds() {
 
 
 function addMarkerToGroup(group, coordinate, html) {
-  var pngIcon = new H.map.Icon("https://fredmeng.github.io/shared/pin.png",{size:{w:20,h:20}});
+  var pngIcon = new H.map.Icon("https://latitude900.com/shared/pin.png",{size:{w:20,h:20}});
   var marker = new H.map.Marker(coordinate,{icon:pngIcon});
   // add custom data to the marker
   marker.setData(html);
@@ -41,14 +41,9 @@ function addInfoBubble(map) {
     ui.addBubble(bubble);
   }, false);
 
-coords.forEach((el)=> {
-  addMarkerToGroup(group, {lat:el[0],lng:el[1]},el[2]);
+  coords.forEach((el)=> {
+    addMarkerToGroup(group, {lat:el[0],lng:el[1]},el[2]);
   })
-
-  // get geo bounding box for the group and set it to the map
-  map.getViewModel().setLookAtData({
-    bounds: group.getBoundingBox()
-  });
 
 }
 
@@ -90,7 +85,7 @@ var defaultLayers = platform.createDefaultLayers();
 //Initialize a map
 var map = new H.Map(document.getElementById('map'),
   defaultLayers.vector.normal.map,{
-  center: {lat:7.10726, lng:48.52233},
+  center: {lat:32.08698, lng:95.37112},
   zoom: 5,
   pixelRatio: window.devicePixelRatio || 1
 });
