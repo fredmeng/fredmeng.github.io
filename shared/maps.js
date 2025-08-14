@@ -85,8 +85,8 @@ var defaultLayers = platform.createDefaultLayers();
 //Initialize a map
 var map = new H.Map(document.getElementById('map'),
   defaultLayers.vector.normal.map,{
-  center: {lat:32.08698, lng:95.37112},
-  zoom: 5,
+  center: {lat:35.3346, lng:92.90771},
+  zoom: 3.38,
   pixelRatio: window.devicePixelRatio || 1
 });
 
