@@ -1,4 +1,4 @@
 // use the map
-//addPolylineToMap(map);
-//addInfoBubble(map);
-addPolylineAndSetViewBounds(map);
+addPolylineToMap(map);
+addInfoBubble(map);
+//addPolylineAndSetViewBounds(map);
