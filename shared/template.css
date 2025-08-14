@@ -31,3 +31,78 @@ a {
     color: #0f1621;
 }
 
+.top-nav {
+  overflow: hidden;
+  background-color: rgb(85,85,85,0.6);
+  position: relative;
+  z-index:100;
+}
+.top-nav #nav-links {
+  display: none;
+}
+.top-nav img {
+  display: block;
+}
+.top-nav a.icon {
+  background: black;
+  display: block;
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 14px 16px;
+  color: white;
+  font-size: 17px;
+  display: block;
+  text-decoration: none;
+}
+.top-nav a:hover {
+  background-color: rgb(111,211,140,0.6);
+  color: black;
+}
+.active {
+  background-color: rgb(85,85,85,0.6);
+  color: white;
+}
+.top-nav #trip-title #trip-title-text {
+  padding-right:35px;
+}
+.top-nav #trip-title a {
+  padding: 14px 16px;
+  color: white;
+  font-size: 17px;
+  display: block;
+  text-decoration: none;
+}
+.top-nav #nav a {
+  padding: 14px 16px;
+  color: white;
+  font-size: 17px;
+  display: block;
+  text-decoration: none;
+}
+.top-nav #meta-info {
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  font-size: 17px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pro {
+  border-style: solid;
+  border-width: 1px;
+  width: 25px;
+  padding: 0px 5px;
+  border-radius: 5px;
+  font-size: 11px;
+  display: inline-block;
+  text-align: center;
+  font-weight: bold;
+  margin-left: 5px;
+}
+.pro a {
+  color: white;
+  text-decoration: none;
+}
