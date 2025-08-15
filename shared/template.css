@@ -6,7 +6,6 @@ body {
     line-height: 22px;
     font-weight: 300;
 }
-
 #map {
     border:1px solid #cdced0;
     position: absolute;
@@ -15,22 +14,9 @@ body {
     right: 0px;
     left: 0px;
 }
-
-div .map-title {
-   left: 0px; 
-   top: 0px; 
-   position: absolute; 
-   background-color: rgba(255, 255, 255, 0.8); 
-   color: rgb(15, 22, 33); 
-   padding: 2px 16px;
-   z-index : 1;
-   font-size: 12px;
-}
-
 a {
     color: #0f1621;
 }
-
 .top-nav {
   overflow: hidden;
   background-color: rgb(85,85,85,0.5);
