@@ -90,10 +90,10 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pro {
+.name {
   border-style: solid;
   border-width: 1px;
-  width: 25px;
+  width: 30px;
   padding: 0px 5px;
   border-radius: 5px;
   font-size: 11px;
@@ -102,7 +102,7 @@ a {
   font-weight: bold;
   margin-left: 5px;
 }
-.pro a {
+.name a {
   color: white;
   text-decoration: none;
 }
