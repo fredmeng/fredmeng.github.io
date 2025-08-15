@@ -33,7 +33,7 @@ a {
 
 .top-nav {
   overflow: hidden;
-  background-color: rgb(85,85,85,0.1);
+  background-color: rgb(85,85,85,0.5);
   position: relative;
   z-index:100;
 }
@@ -88,7 +88,6 @@ a {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .name {
   border-style: solid;
