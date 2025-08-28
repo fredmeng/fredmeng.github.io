@@ -1,3 +1,2 @@
 // use the map
-addPolylineToMap();
-addInfoBubble(map);
+drawLinesSequentially(coords, 700);
