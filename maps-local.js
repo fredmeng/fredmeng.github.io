@@ -1,13 +1,16 @@
-window.onload = function() {
-  // Play background music
-  var music = document.getElementById("bg-music");
-  music.volume = 0.3; // Set volume to 30%
-  music.play().catch((e) => {
-    console.log("Autoplay blocked. Waiting for user interaction.");
+document.getElementById("start-btn").addEventListener("click", () => {
+  // Start background music
+  const music = document.getElementById("bg-music");
+  music.volume = 0.3;
+  music.play().then(() => {
+    console.log("Music started");
+  }).catch((err) => {
+    console.error("Playback failed:", err);
   });
 
-  // Draw lines after a short delay
-  setTimeout(() => {
-    drawLinesSequentially(coords, 700);
-  }, 1000);
-};
+  // Hide the Start button
+  document.getElementById("start-btn").style.display = "none";
+
+  // Start drawing lines
+  drawLinesSequentially(coords, 700); // or your preferred function
+});
