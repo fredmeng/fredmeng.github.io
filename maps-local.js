@@ -12,5 +12,5 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-btn").style.display = "none";
 
   // Start drawing lines
-  drawLinesSequentially(coords, 700); // or your preferred function
+  drawLinesSequentially2(coords, 700); // or your preferred function
 });
