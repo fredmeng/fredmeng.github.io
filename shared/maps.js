@@ -1,3 +1,43 @@
+function drawLinesSequentially2(coords, delay = 700) {
+  let index = 0;
+
+  function drawNextSegment() {
+    if (index < coords.length - 1) {
+      const start = { lat: coords[index][0], lng: coords[index][1] };
+      const end = { lat: coords[index + 1][0], lng: coords[index + 1][1] };
+
+      const lineString = new H.geo.LineString();
+      lineString.pushPoint(start);
+      lineString.pushPoint(end);
+
+      const polyline = new H.map.Polyline(lineString, {
+        style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
+      });
+
+      map.addObject(polyline);
+
+      // Pan the map to the new point
+      map.setCenter(end, true); // 'true' enables animation
+
+      // Optional: show banner messages
+      locationMessages.forEach(loc => {
+        if (Math.abs(end.lat - loc.lat) < 0.01 && Math.abs(end.lng - loc.lng) < 0.01) {
+          showBannerMessage(loc.message);
+        }
+      });
+
+      index++;
+      setTimeout(drawNextSegment, delay);
+    }
+  }
+
+  drawNextSegment();
+}
+
+
+
+
+
 function drawLinesSequentially(coords, delay = 500) {
   let index = 0;
 
