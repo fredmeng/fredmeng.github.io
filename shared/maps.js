@@ -19,13 +19,6 @@ function drawLinesSequentially2(coords, delay = 700) {
       // Pan the map to the new point
       map.setCenter(end, true); // 'true' enables animation
 
-      // Optional: show banner messages
-      locationMessages.forEach(loc => {
-        if (Math.abs(end.lat - loc.lat) < 0.01 && Math.abs(end.lng - loc.lng) < 0.01) {
-          showBannerMessage(loc.message);
-        }
-      });
-
       index++;
       setTimeout(drawNextSegment, delay);
     }
