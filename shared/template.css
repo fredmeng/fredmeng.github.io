@@ -39,6 +39,7 @@ a {
   background-color: rgb(0,120,215,0.5);
   position: relative;
   z-index:100;
+  border-radius: 25px;
 }
 .top-nav #nav-links {
   display: none;
