@@ -29,7 +29,7 @@ function drawLinesSequentially2(coords, delay = 700) {
 
 function drawLinesSequentially(coords, delay = 700) {
   let index = 0;
-  let bubble = null; // keep track of the info bubble
+  let bubble = null;
 
   function drawNextSegment() {
     if (index < coords.length - 1) {
@@ -46,18 +46,19 @@ function drawLinesSequentially(coords, delay = 700) {
 
       map.addObject(polyline);
 
-      // Smooth pan to the new endpoint
+      // Smoothly pan to the new endpoint
       map.setCenter(end, true);
 
-      // Display the location info when reaching this point
+      // Show location name near (not on) the line
       const locationName = coords[index + 1][2];
       if (locationName) {
-        // Remove previous bubble
+        // Remove previous bubble if any
         if (bubble) ui.removeBubble(bubble);
 
-        // Create new bubble
+        // Create a small upward offset (pixels)
         bubble = new H.ui.InfoBubble(end, {
-          content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>`
+          content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>`,
+          offset: { x: 0, y: -25 }  // move the bubble up by 25px to avoid overlapping the line
         });
         ui.addBubble(bubble);
       }
@@ -67,16 +68,19 @@ function drawLinesSequentially(coords, delay = 700) {
     }
   }
 
-  // Show the name of the first point before starting animation
+  // Show name of the first point initially
   if (coords[0][2]) {
     bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
-      content: `<div style="font-weight:bold; font-size:14px;">${coords[0][2]}</div>`
+      content: `<div style="font-weight:bold; font-size:14px;">${coords[0][2]}</div>`,
+      offset: { x: 0, y: -25 }
     });
     ui.addBubble(bubble);
   }
 
   drawNextSegment();
 }
+
+
 
 function navMenu() {
   var x = document.getElementById("nav-links");
