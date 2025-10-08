@@ -27,27 +27,52 @@ function drawLinesSequentially2(coords, delay = 700) {
   drawNextSegment();
 }
 
-
-
-
-
-function drawLinesSequentially(coords, delay = 500) {
+function drawLinesSequentially(coords, delay = 700) {
   let index = 0;
+  let bubble = null; // keep track of the info bubble
 
   function drawNextSegment() {
     if (index < coords.length - 1) {
+      const start = { lat: coords[index][0], lng: coords[index][1] };
+      const end = { lat: coords[index + 1][0], lng: coords[index + 1][1] };
+
       const lineString = new H.geo.LineString();
-      lineString.pushPoint({ lat: coords[index][0], lng: coords[index][1] });
-      lineString.pushPoint({ lat: coords[index + 1][0], lng: coords[index + 1][1] });
+      lineString.pushPoint(start);
+      lineString.pushPoint(end);
 
       const polyline = new H.map.Polyline(lineString, {
         style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
       });
 
       map.addObject(polyline);
+
+      // Smooth pan to the new endpoint
+      map.setCenter(end, true);
+
+      // Display the location info when reaching this point
+      const locationName = coords[index + 1][2];
+      if (locationName) {
+        // Remove previous bubble
+        if (bubble) ui.removeBubble(bubble);
+
+        // Create new bubble
+        bubble = new H.ui.InfoBubble(end, {
+          content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>`
+        });
+        ui.addBubble(bubble);
+      }
+
       index++;
       setTimeout(drawNextSegment, delay);
     }
+  }
+
+  // Show the name of the first point before starting animation
+  if (coords[0][2]) {
+    bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
+      content: `<div style="font-weight:bold; font-size:14px;">${coords[0][2]}</div>`
+    });
+    ui.addBubble(bubble);
   }
 
   drawNextSegment();
