@@ -3,35 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Split View: Map & Video</title>
+    <title>Responsive Map & Video Split</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
             width: 100%;
-            overflow: hidden; /* Prevents double scrollbars */
             font-family: sans-serif;
+            background-color: #000;
         }
 
         .container {
             display: flex;
+            flex-direction: row; /* Default side-by-side */
             height: 100vh;
             width: 100vw;
         }
 
-        .left-pane, .right-pane {
-            flex: 1; /* This creates the 50/50 split */
-            height: 100%;
+        .pane {
+            flex: 1;
             border: none;
-        }
-
-        /* Styling for the YouTube side to center the video vertically */
-        .right-pane {
-            background-color: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
         }
 
         iframe {
@@ -40,21 +33,27 @@
             border: none;
         }
 
-        /* Specific container for the YouTube video to maintain aspect ratio if desired */
-        .video-wrapper {
-            width: 100%;
-            aspect-ratio: 16 / 9;
+        /* MOBILE RESPONSIVENESS */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column; /* Stack vertically on mobile */
+            }
+
+            .pane {
+                height: 50vh; /* Each takes half the height of the phone screen */
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div class="left-pane">
+        <div class="pane">
             <iframe src="https://latitude900.com/" title="Latitude900 Map"></iframe>
         </div>
 
-        <div class="right-pane">
+        <div class="pane">
             <iframe 
                 src="https://www.youtube.com/embed/GH50O8rWrG4?si=rO1avFaIKES8OOeO" 
                 title="YouTube video player" 
