@@ -47,27 +47,5 @@
             </iframe>
         </div>
     </div>
-
-    <div id="audio-control" onclick="toggleVideoAudio()">🔊 Unmute Video</div>
-
-    <script>
-        let isMuted = true;
-        const videoFrame = document.getElementById('video-frame');
-        const btn = document.getElementById('audio-control');
-
-        function toggleVideoAudio() {
-            if (isMuted) {
-                // Reload the video with sound ON
-                videoFrame.src = "https://www.youtube.com/embed/GH50O8rWrG4?autoplay=1&mute=0";
-                btn.innerHTML = "🔇 Mute Video";
-                isMuted = false;
-            } else {
-                // Reload the video with sound OFF
-                videoFrame.src = "https://www.youtube.com/embed/GH50O8rWrG4?autoplay=1&mute=1";
-                btn.innerHTML = "🔊 Unmute Video";
-                isMuted = true;
-            }
-        }
-    </script>
 </body>
 </html>
