@@ -1,51 +1,73 @@
 <!DOCTYPE html>
-<html lang="en" prefix="og: https://ogp.me/ns#">
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
-<meta name="description" content="A 900-day journey spanning six continents"/>
-<meta name="thumbnail" content="latitude900.jpg"/>
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="latitude900.jpg">
-<meta name="twitter:title" content="Latitude 900" />
-<meta name="twitter:description" content="A 900-day journey spanning six continents." />
-<meta property="og:image" content="latitude900.jpg"/>
-<meta property="og:title" content="Latitude 900" />
-<meta property="og:description" content="A 900-day journey spanning six continents." />
-<meta property="og:type" content="website" />
-<meta property="og:url" content="https://latitude900.com/" />
-<title>Latitude 900</title>
-<link rel="icon" href="https://latitude900.com/shared/pin.png">
-<link rel="stylesheet" type="text/css" href="https://js.api.here.com/v3/3.1/mapsjs-ui.css" />
-<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<link rel="stylesheet" type="text/css" href="/shared/template.css" />
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-2PX33D51ND"></script>
-<script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
-<script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
-<script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
-<script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
-<script type="text/javascript" src="/shared/credentials.js"></script>
-<script type="text/javascript" src="data.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Latitude 900 Project</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
+        .container { display: flex; height: 100vh; width: 100vw; flex-direction: row; }
+        .pane { flex: 1; border: none; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* Mobile Stacking */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .pane { height: 50vh; }
+        }
+
+        /* Mute Overlay Button */
+        #audio-control {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
 </head>
 <body>
-<div class="top-nav">
-<div id="trip-title"><a href="https://youtu.be/GH50O8rWrG4" target="_blank" class="active"><div id="trip-title-text">The 'Latitude 900' Project</div></a></div>
-<div id="nav-links">
-<div id="meta-info">A 900-day expedition covering six continents by <div class="name"><a href="https://www.fredmeng.com/" target="_blank">Fred</a></div> & <div class="name"><a href="https://www.linkedin.com/in/stacyt168" target="_blank">Stacey</a></div></div>
-<div id="meta-info"><div class="name"><a href="https://youtu.be/GH50O8rWrG4" target="_blank">YouTube</a></div></div>
-</div>
-<a href="javascript:void(0);" class="icon" onclick="navMenu()">
-<i class="fa fa-bars"></i>
-</a>
-</div>
-<div id="map"></div>
-<button id="start-btn">
-<svg width="30" height="30" viewBox="0 0 24 24" fill="white">
-<path d="M8 5v14l11-7z"/>
-</svg>
-</button>
-<audio id="bg-music" autoplay loop><source src="/shared/forever.mp3" type="audio/mpeg"></audio>
-<script type="text/javascript" src="/shared/maps.js"></script>
-<script type="text/javascript" src="maps-local.js"></script>
-<script type="text/javascript" src="/shared/analytics.js"></script>
-</body></html>
+
+    <div class="container">
+        <div class="pane">
+            <iframe src="https://latitude900.com/" id="map-frame"></iframe>
+        </div>
+
+        <div class="pane">
+            <iframe 
+                id="video-frame"
+                src="https://www.youtube.com/embed/GH50O8rWrG4?autoplay=1&mute=1&enablejsapi=1" 
+                allow="autoplay; encrypted-media">
+            </iframe>
+        </div>
+    </div>
+
+    <div id="audio-control" onclick="toggleVideoAudio()">🔊 Unmute Video</div>
+
+    <script>
+        let isMuted = true;
+        const videoFrame = document.getElementById('video-frame');
+        const btn = document.getElementById('audio-control');
+
+        function toggleVideoAudio() {
+            if (isMuted) {
+                // Reload the video with sound ON
+                videoFrame.src = "https://www.youtube.com/embed/GH50O8rWrG4?autoplay=1&mute=0";
+                btn.innerHTML = "🔇 Mute Video";
+                isMuted = false;
+            } else {
+                // Reload the video with sound OFF
+                videoFrame.src = "https://www.youtube.com/embed/GH50O8rWrG4?autoplay=1&mute=1";
+                btn.innerHTML = "🔊 Unmute Video";
+                isMuted = true;
+            }
+        }
+    </script>
+</body>
+</html>
