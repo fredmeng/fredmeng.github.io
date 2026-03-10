@@ -1,4 +1,4 @@
-function drawLinesSequentially2(coords, delay = 700) {
+function drawLinesSequentially2(coords, delay = 1500) {
   let index = 0;
 
   function drawNextSegment() {
@@ -27,7 +27,7 @@ function drawLinesSequentially2(coords, delay = 700) {
   drawNextSegment();
 }
 
-function drawLinesSequentially(coords, delay = 700) {
+function drawLinesSequentially(coords, delay = 1500) {
   let index = 0;
   let bubble = null;
 
