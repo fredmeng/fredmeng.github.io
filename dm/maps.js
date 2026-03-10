@@ -1,4 +1,4 @@
-function drawLinesSequentially2(coords, delay = 700) {
+function drawLinesSequentially2(coords, delay = 1500) {
   let index = 0;
 
   function drawNextSegment() {
@@ -27,7 +27,7 @@ function drawLinesSequentially2(coords, delay = 700) {
   drawNextSegment();
 }
 
-function drawLinesSequentially(coords, delay = 700) {
+function drawLinesSequentially(coords, delay = 1500) {
   let index = 0;
   let bubble = null;
 
@@ -179,7 +179,7 @@ var defaultLayers = platform.createDefaultLayers();
 var map = new H.Map(document.getElementById('map'),
   defaultLayers.vector.normal.map,{
   center: {lat:-33.8804, lng:151.1155},
-  zoom: 9,
+  zoom: 7,
   pixelRatio: window.devicePixelRatio || 1
 });
 
