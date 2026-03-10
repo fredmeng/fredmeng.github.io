@@ -58,7 +58,7 @@ function drawLinesSequentially(coords, delay = 700) {
         // Create a small upward offset (pixels)
         bubble = new H.ui.InfoBubble(end, {
           content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>`,
-          offset: { x: 0, y: -25 }  // move the bubble up by 25px to avoid overlapping the line
+          offset: { x: 0, y: -40 }  // move the bubble up by 25px to avoid overlapping the line
         });
         ui.addBubble(bubble);
       }
@@ -72,7 +72,7 @@ function drawLinesSequentially(coords, delay = 700) {
   if (coords[0][2]) {
     bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
       content: `<div style="font-weight:bold; font-size:14px;">${coords[0][2]}</div>`,
-      offset: { x: 0, y: -25 }
+      offset: { x: 0, y: -40 }
     });
     ui.addBubble(bubble);
   }
