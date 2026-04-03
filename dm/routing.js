@@ -1,36 +1,74 @@
 /**
- * routing.js
+ * 1. DYNAMIC DATA LOADER
  */
+function loadDataset() {
+  return new Promise((resolve, reject) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    // Default to data_melbourne.js if no parameter is provided
+    const dataFile = urlParams.get('dataset') || 'data_melbourne.js';
+    
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = `/dm/${dataFile}`;
+    
+    script.onload = () => {
+      console.log(`Dataset loaded: ${dataFile}`);
+      resolve();
+    };
+    
+    script.onerror = () => {
+      reject(new Error(`Failed to load dataset: ${dataFile}`));
+    };
+    
+    document.head.appendChild(script);
+  });
+}
 
-var platform = new H.service.Platform({
-  apikey: window.apikey
-});
+/**
+ * 2. MODIFIED INITIALIZATION
+ */
+var platform, defaultLayers, map, behavior, ui, currentBubble;
 
-var defaultLayers = platform.createDefaultLayers();
+async function init() {
+  try {
+    // Wait for the dynamic data to load
+    await loadDataset();
 
-var map = new H.Map(document.getElementById('map'),
-  defaultLayers.vector.normal.map, {
-  center: { lat: coords[0][0], lng: coords[0][1] },
-  zoom: 8,
-  pixelRatio: window.devicePixelRatio || 1
-});
+    // Now initialize the map using the newly loaded 'coords'
+    platform = new H.service.Platform({ apikey: window.apikey });
+    defaultLayers = platform.createDefaultLayers();
 
-window.addEventListener('resize', () => map.getViewPort().resize());
-var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
-var ui = H.ui.UI.createDefault(map, defaultLayers);
-var currentBubble = null;
+    map = new H.Map(document.getElementById('map'),
+      defaultLayers.vector.normal.map, {
+      center: { lat: coords[0][0], lng: coords[0][1] },
+      zoom: 8,
+      pixelRatio: window.devicePixelRatio || 1
+    });
 
+    window.addEventListener('resize', () => map.getViewPort().resize());
+    behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+    ui = H.ui.UI.createDefault(map, defaultLayers);
+
+    // Show the start button now that we are ready
+    document.getElementById('start-btn').style.display = 'flex';
+  } catch (err) {
+    alert("Error loading route data. Please check the URL.");
+    console.error(err);
+  }
+}
+
+/**
+ * 3. CORE ANIMATION ENGINE (Segment-Based)
+ */
 async function startJourney() {
-  const startBtn = document.getElementById('start-btn');
-  if (startBtn) startBtn.style.display = 'none';
+  document.getElementById('start-btn').style.display = 'none';
 
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
     const end = coords[i + 1];
-
     updateInfoBubble({ lat: start[0], lng: start[1] }, start[2]);
     await new Promise(r => setTimeout(r, 1000));
-    await animateDrivingSegment(start, end, 5); // Speed set to 5ms for smooth driving
+    await animateDrivingSegment(start, end, 5);
   }
 
   const last = coords[coords.length - 1];
@@ -51,19 +89,14 @@ function animateDrivingSegment(startCoord, endCoord, speed) {
     router.calculateRoute(params, (result) => {
       if (result.routes && result.routes.length) {
         const section = result.routes[0].sections[0];
-        // This requires the 'mapsjs-data.js' library!
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
         const points = [];
         lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
-
         growLineSegments(points, speed, resolve);
       } else {
         resolve();
       }
-    }, (err) => {
-      console.error(err);
-      resolve();
-    });
+    }, resolve);
   });
 }
 
@@ -76,7 +109,6 @@ function growLineSegments(points, speed, onComplete) {
     if (i < points.length - 1) {
       const p1 = points[i];
       const p2 = points[i + 1];
-
       const stepLS = new H.geo.LineString();
       stepLS.pushPoint(p1);
       stepLS.pushPoint(p2);
@@ -87,7 +119,6 @@ function growLineSegments(points, speed, onComplete) {
 
       segmentGroup.addObject(stepPoly);
       map.setCenter(p2);
-
       i++;
       setTimeout(animate, speed);
     } else {
@@ -105,16 +136,17 @@ function updateInfoBubble(pos, text) {
   ui.addBubble(currentBubble);
 }
 
-function navMenu() {
-  var x = document.getElementById("nav-links");
-  x.style.display = (x.style.display === "block") ? "none" : "block";
-}
-
+/**
+ * 4. EVENT LISTENERS
+ */
 document.getElementById('start-btn').addEventListener('click', () => {
   const music = document.getElementById('bg-music');
   if (music) {
     music.volume = 0.3;
-    music.play().catch(() => console.log("Autoplay blocked"));
+    music.play().catch(() => {});
   }
   startJourney();
 });
+
+// Run initialization
+init();
