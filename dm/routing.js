@@ -1,119 +1,92 @@
 /**
- * 1. INITIALIZE MAP & SERVICES
+ * routing.js
  */
+
 var platform = new H.service.Platform({
-    apikey: window.apikey // Loaded from /shared/credentials.js
+  apikey: window.apikey
 });
 
 var defaultLayers = platform.createDefaultLayers();
 
-// Initialize map centered on the first coordinate in your data
 var map = new H.Map(document.getElementById('map'),
-    defaultLayers.vector.normal.map, {
-        center: { lat: coords[0][0], lng: coords[0][1] },
-        zoom: 7,
-        pixelRatio: window.devicePixelRatio || 1
-    });
+  defaultLayers.vector.normal.map, {
+  center: { lat: coords[0][0], lng: coords[0][1] },
+  zoom: 8,
+  pixelRatio: window.devicePixelRatio || 1
+});
 
-// Add basic interactions (Pan/Zoom)
+window.addEventListener('resize', () => map.getViewPort().resize());
 var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
 var ui = H.ui.UI.createDefault(map, defaultLayers);
 var currentBubble = null;
 
-// Resize listener
-window.addEventListener('resize', () => map.getViewPort().resize());
-
-/**
- * 2. CORE ANIMATION LOGIC
- */
-
 async function startJourney() {
-    // Hide the start button once clicked
-    const startBtn = document.getElementById('start-btn');
-    if (startBtn) startBtn.style.display = 'none';
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) startBtn.style.display = 'none';
 
-    // Loop through each segment of the coordinates array
-    for (let i = 0; i < coords.length - 1; i++) {
-        const startPoint = coords[i];
-        const endPoint = coords[i + 1];
+  for (let i = 0; i < coords.length - 1; i++) {
+    const start = coords[i];
+    const end = coords[i + 1];
 
-        // Show location bubble
-        updateInfoBubble({ lat: startPoint[0], lng: startPoint[1] }, startPoint[2]);
+    updateInfoBubble({ lat: start[0], lng: start[1] }, start[2]);
+    await new Promise(r => setTimeout(r, 1000));
+    await animateDrivingSegment(start, end, 5); // Speed set to 5ms for smooth driving
+  }
 
-        // Brief pause at each town (1 second)
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Calculate route and drive the "car"
-        await animateDrivingSegment(startPoint, endPoint, 10);
-    }
-
-    // Show bubble for the very last destination
-    const lastPoint = coords[coords.length - 1];
-    updateInfoBubble({ lat: lastPoint[0], lng: lastPoint[1] }, lastPoint[2]);
+  const last = coords[coords.length - 1];
+  updateInfoBubble({ lat: last[0], lng: last[1] }, last[2]);
 }
 
 function animateDrivingSegment(startCoord, endCoord, speed) {
-    return new Promise((resolve) => {
-        const router = platform.getRoutingService(null, 8);
-        const routingParameters = {
-            'routingMode': 'fast',
-            'transportMode': 'car',
-            'origin': `${startCoord[0]},${startCoord[1]}`,
-            'destination': `${endCoord[0]},${endCoord[1]}`,
-            'return': 'polyline'
-        };
+  return new Promise((resolve) => {
+    const router = platform.getRoutingService(null, 8);
+    const params = {
+      'routingMode': 'fast',
+      'transportMode': 'car',
+      'origin': `${startCoord[0]},${startCoord[1]}`,
+      'destination': `${endCoord[0]},${endCoord[1]}`,
+      'return': 'polyline'
+    };
 
-        router.calculateRoute(routingParameters, (result) => {
-            if (result.routes.length) {
-                const section = result.routes[0].sections[0];
-                const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
-                const points = [];
-                
-                lineString.eachLatLngAlt((lat, lng) => {
-                    points.push({ lat, lng });
-                });
+    router.calculateRoute(params, (result) => {
+      if (result.routes && result.routes.length) {
+        const section = result.routes[0].sections[0];
+        // This requires the 'mapsjs-data.js' library!
+        const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
+        const points = [];
+        lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
 
-                growLine(points, speed, resolve);
-            } else {
-                console.warn("Route not found between:", startCoord[2], endCoord[2]);
-                resolve();
-            }
-        }, (error) => {
-            console.error(error);
-            resolve();
-        });
+        growLineSegments(points, speed, resolve);
+      } else {
+        resolve();
+      }
+    }, (err) => {
+      console.error(err);
+      resolve();
     });
+  });
 }
 
-function growLine(points, speed, onComplete) {
+function growLineSegments(points, speed, onComplete) {
   let i = 0;
-  
-  // 1. Initialize the LineString with the first point immediately.
-  // This prevents the Polyline from ever having an "empty" geometry.
-  const initialLineString = new H.geo.LineString();
-  initialLineString.pushPoint(points[0]);
-
-  const polyline = new H.map.Polyline(initialLineString, {
-    style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.8)' }
-  });
-  map.addObject(polyline);
+  const segmentGroup = new H.map.Group();
+  map.addObject(segmentGroup);
 
   function animate() {
-    if (i < points.length) {
-      // 2. Create a FRESH LineString for this frame.
-      // This is the key to avoiding the InvalidArgumentError.
-      const currentFrameLineString = new H.geo.LineString();
-      
-      // Add all points from the beginning up to the current index
-      for (let j = 0; j <= i; j++) {
-        currentFrameLineString.pushPoint(points[j]);
-      }
+    if (i < points.length - 1) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
 
-      // 3. Set the geometry using the new, fully-formed LineString.
-      polyline.setGeometry(currentFrameLineString);
-      
-      // Update camera
-      map.setCenter(points[i]); 
+      const stepLS = new H.geo.LineString();
+      stepLS.pushPoint(p1);
+      stepLS.pushPoint(p2);
+
+      const stepPoly = new H.map.Polyline(stepLS, {
+        style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
+      });
+
+      segmentGroup.addObject(stepPoly);
+      map.setCenter(p2);
 
       i++;
       setTimeout(animate, speed);
@@ -121,36 +94,27 @@ function growLine(points, speed, onComplete) {
       onComplete();
     }
   }
-  
   animate();
 }
 
-/**
- * 3. UI HELPERS
- */
-
 function updateInfoBubble(pos, text) {
-    if (currentBubble) ui.removeBubble(currentBubble);
-    currentBubble = new H.ui.InfoBubble(pos, {
-        content: `<div style="padding:5px 10px; font-weight:bold; font-size:14px; color:black;">${text}</div>`
-    });
-    ui.addBubble(currentBubble);
+  if (currentBubble) ui.removeBubble(currentBubble);
+  currentBubble = new H.ui.InfoBubble(pos, {
+    content: `<div style="padding:5px; font-weight:bold; color:black;">${text}</div>`
+  });
+  ui.addBubble(currentBubble);
 }
 
 function navMenu() {
-    var x = document.getElementById("nav-links");
-    x.style.display = (x.style.display === "block") ? "none" : "block";
+  var x = document.getElementById("nav-links");
+  x.style.display = (x.style.display === "block") ? "none" : "block";
 }
 
-/**
- * 4. EVENT LISTENERS
- */
-
-// Handle the Start Button Click
 document.getElementById('start-btn').addEventListener('click', () => {
-    // Start music if blocked by browser autoplay policy
-    const music = document.getElementById('bg-music');
-    if (music) music.play();
-    
-    startJourney();
+  const music = document.getElementById('bg-music');
+  if (music) {
+    music.volume = 0.3;
+    music.play().catch(() => console.log("Autoplay blocked"));
+  }
+  startJourney();
 });
