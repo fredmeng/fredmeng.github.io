@@ -1,3 +1,8 @@
+const meta = {
+  title: "Road Trip: Sydney to Broken Hill (2023)",
+  description: "A drive through NSW's outback."
+};
+
 const coords = [
   [-33.8804, 151.1155, "Croydon 克羅伊登"],
   [-34.5075, 150.3329, "Berrima 貝里馬"],
