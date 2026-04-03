@@ -25,16 +25,18 @@ function loadDataset() {
 }
 
 /**
- * 2. MODIFIED INITIALIZATION
+ * 2. GLOBAL VARIABLES & INITIALIZATION
  */
 var platform, defaultLayers, map, behavior, ui, currentBubble;
 
 async function init() {
   try {
-    // Wait for the dynamic data to load
+    // Wait for the dynamic data to load before doing anything
     await loadDataset();
 
-    // Now initialize the map using the newly loaded 'coords'
+    // Check if coords exists in the loaded file
+    if (typeof coords === 'undefined') throw new Error("coords not defined in data file");
+
     platform = new H.service.Platform({ apikey: window.apikey });
     defaultLayers = platform.createDefaultLayers();
 
@@ -50,15 +52,26 @@ async function init() {
     ui = H.ui.UI.createDefault(map, defaultLayers);
 
     // Show the start button now that we are ready
-    document.getElementById('start-btn').style.display = 'flex';
+    const btn = document.getElementById('start-btn');
+    if (btn) btn.style.display = 'flex';
+
   } catch (err) {
-    alert("Error loading route data. Please check the URL.");
-    console.error(err);
+    console.error("Initialization failed:", err);
   }
 }
 
 /**
- * 3. CORE ANIMATION ENGINE (Segment-Based)
+ * 3. NAVIGATION MENU (Fixes the ReferenceError)
+ */
+function navMenu() {
+  var x = document.getElementById("nav-links");
+  if (x) {
+    x.style.display = (x.style.display === "block") ? "none" : "block";
+  }
+}
+
+/**
+ * 4. ANIMATION LOGIC
  */
 async function startJourney() {
   document.getElementById('start-btn').style.display = 'none';
@@ -66,6 +79,7 @@ async function startJourney() {
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
     const end = coords[i + 1];
+    
     updateInfoBubble({ lat: start[0], lng: start[1] }, start[2]);
     await new Promise(r => setTimeout(r, 1000));
     await animateDrivingSegment(start, end, 5);
@@ -137,7 +151,7 @@ function updateInfoBubble(pos, text) {
 }
 
 /**
- * 4. EVENT LISTENERS
+ * 5. EVENT LISTENERS
  */
 document.getElementById('start-btn').addEventListener('click', () => {
   const music = document.getElementById('bg-music');
@@ -148,5 +162,5 @@ document.getElementById('start-btn').addEventListener('click', () => {
   startJourney();
 });
 
-// Run initialization
+// Run the initialization
 init();
