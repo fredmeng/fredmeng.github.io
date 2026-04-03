@@ -87,18 +87,28 @@ function animateDrivingSegment(startCoord, endCoord, speed) {
 
 function growLine(points, speed, onComplete) {
     let i = 0;
-    const animatedLineString = new H.geo.LineString();
-    const polyline = new H.map.Polyline(animatedLineString, {
+    // Create the polyline with an initial point to avoid "empty geometry" errors
+    const initialLineString = new H.geo.LineString();
+    initialLineString.pushPoint(points[0]);
+
+    const polyline = new H.map.Polyline(initialLineString, {
         style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.8)' }
     });
     map.addObject(polyline);
 
     function animate() {
         if (i < points.length) {
-            animatedLineString.pushPoint(points[i]);
-            polyline.setGeometry(animatedLineString);
+            // We create a fresh LineString containing all points up to 'i'
+            // This is the safest way to update geometry in HERE Maps 3.1
+            const currentLineString = new H.geo.LineString();
+            for (let j = 0; j <= i; j++) {
+                currentLineString.pushPoint(points[j]);
+            }
+
+            // Update the polyline with the complete new geometry
+            polyline.setGeometry(currentLineString);
             
-            // Camera follows the line tip
+            // Move the camera
             map.setCenter(points[i]); 
 
             i++;
