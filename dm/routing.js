@@ -31,30 +31,28 @@ var platform, defaultLayers, map, behavior, ui, currentBubble;
 
 async function init() {
   try {
-    // Wait for the dynamic data to load before doing anything
     await loadDataset();
 
-    // Check if coords exists in the loaded file
-    if (typeof coords === 'undefined') throw new Error("coords not defined in data file");
+    // 1. Update the Browser Tab Title
+    if (typeof meta !== 'undefined' && meta.title) {
+      document.title = meta.title;
+      
+      // 2. Update the Visible Trip Title on the page
+      const titleTextElement = document.getElementById('trip-title-text');
+      if (titleTextElement) {
+        titleTextElement.innerText = meta.title;
+      }
 
+      // 3. Update Meta Description (for SEO/Browsers)
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && meta.description) {
+        metaDesc.setAttribute('content', meta.description);
+      }
+    }
+
+    // Existing Map initialization code...
     platform = new H.service.Platform({ apikey: window.apikey });
-    defaultLayers = platform.createDefaultLayers();
-
-    map = new H.Map(document.getElementById('map'),
-      defaultLayers.vector.normal.map, {
-      center: { lat: coords[0][0], lng: coords[0][1] },
-      zoom: 8,
-      pixelRatio: window.devicePixelRatio || 1
-    });
-
-    window.addEventListener('resize', () => map.getViewPort().resize());
-    behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
-    ui = H.ui.UI.createDefault(map, defaultLayers);
-
-    // Show the start button now that we are ready
-    const btn = document.getElementById('start-btn');
-    if (btn) btn.style.display = 'flex';
-
+    // ... rest of your init() code
   } catch (err) {
     console.error("Initialization failed:", err);
   }

@@ -1,3 +1,8 @@
+const meta = {
+  title: "Road Trip: Sydney to Melbourne (2026)",
+  description: "A scenic coastal drive through NSW and Victoria."
+};
+
 const coords = [
   [-33.8804, 151.1155, "Croydon 克羅伊登"],
   [-37.0628, 149.9044, "Eden 伊登"],
