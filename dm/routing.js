@@ -86,38 +86,43 @@ function animateDrivingSegment(startCoord, endCoord, speed) {
 }
 
 function growLine(points, speed, onComplete) {
-    let i = 0;
-    // Create the polyline with an initial point to avoid "empty geometry" errors
-    const initialLineString = new H.geo.LineString();
-    initialLineString.pushPoint(points[0]);
+  let i = 0;
+  
+  // 1. Initialize the LineString with the first point immediately.
+  // This prevents the Polyline from ever having an "empty" geometry.
+  const initialLineString = new H.geo.LineString();
+  initialLineString.pushPoint(points[0]);
 
-    const polyline = new H.map.Polyline(initialLineString, {
-        style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.8)' }
-    });
-    map.addObject(polyline);
+  const polyline = new H.map.Polyline(initialLineString, {
+    style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.8)' }
+  });
+  map.addObject(polyline);
 
-    function animate() {
-        if (i < points.length) {
-            // We create a fresh LineString containing all points up to 'i'
-            // This is the safest way to update geometry in HERE Maps 3.1
-            const currentLineString = new H.geo.LineString();
-            for (let j = 0; j <= i; j++) {
-                currentLineString.pushPoint(points[j]);
-            }
+  function animate() {
+    if (i < points.length) {
+      // 2. Create a FRESH LineString for this frame.
+      // This is the key to avoiding the InvalidArgumentError.
+      const currentFrameLineString = new H.geo.LineString();
+      
+      // Add all points from the beginning up to the current index
+      for (let j = 0; j <= i; j++) {
+        currentFrameLineString.pushPoint(points[j]);
+      }
 
-            // Update the polyline with the complete new geometry
-            polyline.setGeometry(currentLineString);
-            
-            // Move the camera
-            map.setCenter(points[i]); 
+      // 3. Set the geometry using the new, fully-formed LineString.
+      polyline.setGeometry(currentFrameLineString);
+      
+      // Update camera
+      map.setCenter(points[i]); 
 
-            i++;
-            setTimeout(animate, speed);
-        } else {
-            onComplete();
-        }
+      i++;
+      setTimeout(animate, speed);
+    } else {
+      onComplete();
     }
-    animate();
+  }
+  
+  animate();
 }
 
 /**
