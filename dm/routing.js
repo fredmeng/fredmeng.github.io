@@ -33,28 +33,43 @@ async function init() {
   try {
     await loadDataset();
 
-    // 1. Update the Browser Tab Title
-    if (typeof meta !== 'undefined' && meta.title) {
-      document.title = meta.title;
-      
-      // 2. Update the Visible Trip Title on the page
+    // 1. Dynamic Metadata Updates
+    if (typeof meta !== 'undefined') {
+      if (meta.title) document.title = meta.title;
       const titleTextElement = document.getElementById('trip-title-text');
-      if (titleTextElement) {
-        titleTextElement.innerText = meta.title;
-      }
-
-      // 3. Update Meta Description (for SEO/Browsers)
+      if (titleTextElement && meta.title) titleTextElement.innerText = meta.title;
+      
       let metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc && meta.description) {
-        metaDesc.setAttribute('content', meta.description);
-      }
+      if (metaDesc && meta.description) metaDesc.setAttribute('content', meta.description);
     }
 
-    // Existing Map initialization code...
-    platform = new H.service.Platform({ apikey: window.apikey });
-    // ... rest of your init() code
+    // 2. Initialize Platform
+    platform = new H.service.Platform({ 
+        apikey: window.apikey 
+    });
+    defaultLayers = platform.createDefaultLayers();
+
+    // 3. Initialize Map (using coords from the dynamic dataset)
+    map = new H.Map(document.getElementById('map'),
+      defaultLayers.vector.normal.map, {
+      center: { lat: coords[0][0], lng: coords[0][1] },
+      zoom: 7,
+      pixelRatio: window.devicePixelRatio || 1
+    });
+
+    // 4. Map Interactions
+    window.addEventListener('resize', () => map.getViewPort().resize());
+    behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+    ui = H.ui.UI.createDefault(map, defaultLayers);
+
+    // 5. Make button visible once map is ready
+    const btn = document.getElementById('start-btn');
+    if (btn) btn.style.display = 'flex';
+
   } catch (err) {
     console.error("Initialization failed:", err);
+    // Fallback if data fails to load
+    alert("Could not load travel data. Please check the URL.");
   }
 }
 
