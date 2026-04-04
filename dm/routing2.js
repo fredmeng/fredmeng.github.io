@@ -32,7 +32,6 @@ async function init() {
   try {
     await loadDataset();
 
-    // Update Metadata from the loaded dataset
     if (typeof meta !== 'undefined') {
       if (meta.title) document.title = meta.title;
       const titleTextElement = document.getElementById('trip-title-text');
@@ -50,7 +49,13 @@ async function init() {
     });
 
     window.addEventListener('resize', () => map.getViewPort().resize());
-    behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+
+    // --- CRITICAL FIX START ---
+    // This part enables the map to listen for clicks/taps
+    var mapEvents = new H.mapevents.MapEvents(map);
+    behavior = new H.mapevents.Behavior(mapEvents);
+    // --- CRITICAL FIX END ---
+
     ui = H.ui.UI.createDefault(map, defaultLayers);
 
     const btn = document.getElementById('start-btn');
@@ -76,30 +81,22 @@ function navMenu() {
  */
 
 function addDestinationPin(pos, text) {
-  // 1. Make the pin half size (Original was 32x32, now 16x16)
   const icon = new H.map.Icon('https://latitude900.com/shared/pin.png', {
-    size: { w: 16, h: 16 },
-    anchor: { x: 8, y: 16 } // Anchor at the bottom center of the smaller pin
+    size: { w: 16, h: 16 }, // Half size as requested
+    anchor: { x: 8, y: 16 }
   });
 
   const marker = new H.map.Marker(pos, { icon: icon });
   
-  // Store the destination name inside the marker for retrieval
+  // Store data for the bubble
   marker.setData(text);
 
-  // 2. Make the pin clickable (tap event)
-  // 3. Display the pop up window after clicking
-  marker.addEventListener('tap', (evt) => {
-    // Close existing bubble if one is open
+  // Use 'tap' for mobile and desktop click compatibility
+  marker.addEventListener('tap', function(evt) {
     if (currentBubble) ui.removeBubble(currentBubble);
 
-    // Create and show the new InfoBubble
     currentBubble = new H.ui.InfoBubble(evt.target.getGeometry(), {
-      content: `
-        <div style="padding:8px; min-width:100px; color:black; font-family:sans-serif;">
-          <div style="font-size:11px; color:#777; margin-bottom:2px;">Location</div>
-          <div style="font-weight:bold; font-size:13px;">${evt.target.getData()}</div>
-        </div>`
+      content: `<div style="padding:10px; min-width:120px; color:black; font-weight:bold;">${evt.target.getData()}</div>`
     });
     ui.addBubble(currentBubble);
   });
