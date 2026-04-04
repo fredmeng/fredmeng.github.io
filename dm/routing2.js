@@ -1,13 +1,68 @@
 /**
+ * 1. DYNAMIC DATA LOADER
+ */
+function loadDataset() {
+  return new Promise((resolve, reject) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const dataFile = urlParams.get('dataset') || 'data_melbourne.js';
+    
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = `/dm/${dataFile}`;
+    
+    script.onload = () => {
+      console.log(`Dataset loaded: ${dataFile}`);
+      resolve();
+    };
+    
+    script.onerror = () => {
+      reject(new Error(`Failed to load dataset: ${dataFile}`));
+    };
+    
+    document.head.appendChild(script);
+  });
+}
+
+/**
  * 2. GLOBAL VARIABLES & INITIALIZATION
  */
 var platform, defaultLayers, map, behavior, ui, currentBubble;
-var markers = []; // Array to keep track of all pins displayed
 
-// ... keep your loadDataset() and init() functions as they are ...
+async function init() {
+  try {
+    await loadDataset();
+
+    // Update Metadata from the loaded dataset
+    if (typeof meta !== 'undefined') {
+      if (meta.title) document.title = meta.title;
+      const titleTextElement = document.getElementById('trip-title-text');
+      if (titleTextElement) titleTextElement.innerText = meta.title;
+    }
+
+    platform = new H.service.Platform({ apikey: window.apikey });
+    defaultLayers = platform.createDefaultLayers();
+
+    map = new H.Map(document.getElementById('map'),
+      defaultLayers.vector.normal.map, {
+      center: { lat: coords[0][0], lng: coords[0][1] },
+      zoom: 7,
+      pixelRatio: window.devicePixelRatio || 1
+    });
+
+    window.addEventListener('resize', () => map.getViewPort().resize());
+    behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+    ui = H.ui.UI.createDefault(map, defaultLayers);
+
+    const btn = document.getElementById('start-btn');
+    if (btn) btn.style.display = 'flex';
+
+  } catch (err) {
+    console.error("Initialization failed:", err);
+  }
+}
 
 /**
- * 3. UI HELPERS
+ * 3. UI HELPERS & PIN LOGIC
  */
 function navMenu() {
   var x = document.getElementById("nav-links");
@@ -16,9 +71,6 @@ function navMenu() {
   }
 }
 
-/**
- * NEW: Creates a permanent pin and attaches a click listener
- */
 function addDestinationPin(pos, text) {
   const icon = new H.map.Icon('https://latitude900.com/shared/pin.png', {
     size: { w: 32, h: 32 },
@@ -27,15 +79,12 @@ function addDestinationPin(pos, text) {
 
   const marker = new H.map.Marker(pos, { icon: icon });
   
-  // Store the destination name inside the marker object for retrieval on click
+  // Store the destination name inside the marker
   marker.setData(text);
 
-  // Add click listener to the marker
+  // Click listener for the Pin
   marker.addEventListener('tap', (evt) => {
-    // Close any existing bubble
     if (currentBubble) ui.removeBubble(currentBubble);
-
-    // Create a new bubble at the pin's position
     currentBubble = new H.ui.InfoBubble(evt.target.getGeometry(), {
       content: `<div style="padding:10px; min-width:120px; color:black; font-weight:bold;">${evt.target.getData()}</div>`
     });
@@ -43,7 +92,6 @@ function addDestinationPin(pos, text) {
   });
 
   map.addObject(marker);
-  markers.push(marker);
 }
 
 /**
@@ -52,28 +100,21 @@ function addDestinationPin(pos, text) {
 async function startJourney() {
   document.getElementById('start-btn').style.display = 'none';
 
-  // 1. Show the starting point pin immediately
+  // Drop the very first pin
   addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
 
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
     const end = coords[i + 1];
     
-    // 2. Drop the pin for the NEXT destination before drawing the line
+    // Show the NEXT destination pin before driving
     addDestinationPin({ lat: end[0], lng: end[1] }, end[2]);
     
-    // Brief pause before driving
     await new Promise(r => setTimeout(r, 1000));
-
-    // 3. Animate the car driving
     await animateDrivingSegment(start, end, 5);
   }
 }
 
-/**
- * Update the calculateRoute and growLineSegments functions 
- * (Ensure you are using the 'mapsjs-mapevents.js' for the 'tap' listener)
- */
 function animateDrivingSegment(startCoord, endCoord, speed) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
@@ -139,4 +180,5 @@ document.getElementById('start-btn').addEventListener('click', () => {
   startJourney();
 });
 
+// Run initialization
 init();
