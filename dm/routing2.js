@@ -1,5 +1,6 @@
 /**
  * 1. DYNAMIC DATA LOADER
+ * Fetches the dataset file based on the URL parameter ?dataset=filename.js
  */
 function loadDataset() {
   return new Promise((resolve, reject) => {
@@ -30,14 +31,20 @@ var platform, defaultLayers, map, behavior, ui, currentBubble;
 
 async function init() {
   try {
+    // Wait for the .js data file to load
     await loadDataset();
 
+    // Update dynamic page titles from the loaded 'meta' object
     if (typeof meta !== 'undefined') {
       if (meta.title) document.title = meta.title;
       const titleTextElement = document.getElementById('trip-title-text');
       if (titleTextElement) titleTextElement.innerText = meta.title;
+      
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && meta.description) metaDesc.setAttribute('content', meta.description);
     }
 
+    // Initialize HERE Platform & Map
     platform = new H.service.Platform({ apikey: window.apikey });
     defaultLayers = platform.createDefaultLayers();
 
@@ -50,14 +57,12 @@ async function init() {
 
     window.addEventListener('resize', () => map.getViewPort().resize());
 
-    // --- CRITICAL FIX START ---
-    // This part enables the map to listen for clicks/taps
+    // CRITICAL: Enables map interaction (panning, zooming, and CLICKING pins)
     var mapEvents = new H.mapevents.MapEvents(map);
     behavior = new H.mapevents.Behavior(mapEvents);
-    // --- CRITICAL FIX END ---
-
     ui = H.ui.UI.createDefault(map, defaultLayers);
 
+    // Make start button visible once everything is ready
     const btn = document.getElementById('start-btn');
     if (btn) btn.style.display = 'flex';
 
@@ -76,123 +81,6 @@ function navMenu() {
   }
 }
 
-/**
- * UI HELPERS & PIN LOGIC
- */
-
 function addDestinationPin(pos, text) {
-  const icon = new H.map.Icon('https://latitude900.com/shared/pin.png', {
-    size: { w: 16, h: 16 }, // Half size as requested
-    anchor: { x: 8, y: 16 }
-  });
-
-  const marker = new H.map.Marker(pos, { icon: icon });
-  
-  // Store data for the bubble
-  marker.setData(text);
-
-  // Use 'tap' for mobile and desktop click compatibility
-  marker.addEventListener('tap', function(evt) {
-    if (currentBubble) ui.removeBubble(currentBubble);
-
-    currentBubble = new H.ui.InfoBubble(evt.target.getGeometry(), {
-      content: `<div style="padding:10px; min-width:120px; color:black; font-weight:bold;">${evt.target.getData()}</div>`
-    });
-    ui.addBubble(currentBubble);
-  });
-
-  map.addObject(marker);
-}
-
-/**
- * ANIMATION ENGINE
- */
-async function startJourney() {
-  const btn = document.getElementById('start-btn');
-  if (btn) btn.style.display = 'none';
-
-  // Drop the very first pin (Origin)
-  addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
-
-  for (let i = 0; i < coords.length - 1; i++) {
-    const start = coords[i];
-    const end = coords[i + 1];
-    
-    // Drop the NEXT destination pin (Half-size, clickable)
-    addDestinationPin({ lat: end[0], lng: end[1] }, end[2]);
-    
-    // Brief pause to look at the new pin before driving
-    await new Promise(r => setTimeout(r, 1000));
-
-    // Animate the car driving along the route
-    await animateDrivingSegment(start, end, 5);
-  }
-}
-
-function animateDrivingSegment(startCoord, endCoord, speed) {
-  return new Promise((resolve) => {
-    const router = platform.getRoutingService(null, 8);
-    const params = {
-      'routingMode': 'fast',
-      'transportMode': 'car',
-      'origin': `${startCoord[0]},${startCoord[1]}`,
-      'destination': `${endCoord[0]},${endCoord[1]}`,
-      'return': 'polyline'
-    };
-
-    router.calculateRoute(params, (result) => {
-      if (result.routes && result.routes.length) {
-        const section = result.routes[0].sections[0];
-        const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
-        const points = [];
-        lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
-        growLineSegments(points, speed, resolve);
-      } else {
-        resolve();
-      }
-    }, resolve);
-  });
-}
-
-function growLineSegments(points, speed, onComplete) {
-  let i = 0;
-  const segmentGroup = new H.map.Group();
-  map.addObject(segmentGroup);
-
-  function animate() {
-    if (i < points.length - 1) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const stepLS = new H.geo.LineString();
-      stepLS.pushPoint(p1);
-      stepLS.pushPoint(p2);
-
-      const stepPoly = new H.map.Polyline(stepLS, {
-        style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
-      });
-
-      segmentGroup.addObject(stepPoly);
-      map.setCenter(p2);
-      i++;
-      setTimeout(animate, speed);
-    } else {
-      onComplete();
-    }
-  }
-  animate();
-}
-
-/**
- * 5. EVENT LISTENERS
- */
-document.getElementById('start-btn').addEventListener('click', () => {
-  const music = document.getElementById('bg-music');
-  if (music) {
-    music.volume = 0.3;
-    music.play().catch(() => {});
-  }
-  startJourney();
-});
-
-// Run initialization
-init();
+  // Half-size pin (16x16)
+  const icon = new H.map.Icon('https://latitude90
