@@ -71,22 +71,35 @@ function navMenu() {
   }
 }
 
+/**
+ * UI HELPERS & PIN LOGIC
+ */
+
 function addDestinationPin(pos, text) {
+  // 1. Make the pin half size (Original was 32x32, now 16x16)
   const icon = new H.map.Icon('https://latitude900.com/shared/pin.png', {
-    size: { w: 32, h: 32 },
-    anchor: { x: 16, y: 32 }
+    size: { w: 16, h: 16 },
+    anchor: { x: 8, y: 16 } // Anchor at the bottom center of the smaller pin
   });
 
   const marker = new H.map.Marker(pos, { icon: icon });
   
-  // Store the destination name inside the marker
+  // Store the destination name inside the marker for retrieval
   marker.setData(text);
 
-  // Click listener for the Pin
+  // 2. Make the pin clickable (tap event)
+  // 3. Display the pop up window after clicking
   marker.addEventListener('tap', (evt) => {
+    // Close existing bubble if one is open
     if (currentBubble) ui.removeBubble(currentBubble);
+
+    // Create and show the new InfoBubble
     currentBubble = new H.ui.InfoBubble(evt.target.getGeometry(), {
-      content: `<div style="padding:10px; min-width:120px; color:black; font-weight:bold;">${evt.target.getData()}</div>`
+      content: `
+        <div style="padding:8px; min-width:100px; color:black; font-family:sans-serif;">
+          <div style="font-size:11px; color:#777; margin-bottom:2px;">Location</div>
+          <div style="font-weight:bold; font-size:13px;">${evt.target.getData()}</div>
+        </div>`
     });
     ui.addBubble(currentBubble);
   });
@@ -95,22 +108,26 @@ function addDestinationPin(pos, text) {
 }
 
 /**
- * 4. ANIMATION ENGINE
+ * ANIMATION ENGINE
  */
 async function startJourney() {
-  document.getElementById('start-btn').style.display = 'none';
+  const btn = document.getElementById('start-btn');
+  if (btn) btn.style.display = 'none';
 
-  // Drop the very first pin
+  // Drop the very first pin (Origin)
   addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
 
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
     const end = coords[i + 1];
     
-    // Show the NEXT destination pin before driving
+    // Drop the NEXT destination pin (Half-size, clickable)
     addDestinationPin({ lat: end[0], lng: end[1] }, end[2]);
     
+    // Brief pause to look at the new pin before driving
     await new Promise(r => setTimeout(r, 1000));
+
+    // Animate the car driving along the route
     await animateDrivingSegment(start, end, 5);
   }
 }
