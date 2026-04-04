@@ -176,7 +176,6 @@ function updateInfoBubble(pos, text) {
   currentBubble = new H.ui.InfoBubble(pos, {
     content: `
       <div style="padding:10px; min-width:150px; color:black;">
-        <div style="font-size:12px; color:#666; margin-bottom:4px;">Travel Log</div>
         <div style="font-weight:bold; font-size:14px;">${text}</div>
       </div>`,
     // Offset helps visibility while the line is drawing underneath
