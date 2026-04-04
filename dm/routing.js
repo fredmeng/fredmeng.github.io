@@ -87,19 +87,30 @@ function navMenu() {
  * 4. ANIMATION LOGIC
  */
 async function startJourney() {
-  document.getElementById('start-btn').style.display = 'none';
+  const btn = document.getElementById('start-btn');
+  if (btn) btn.style.display = 'none';
+
+  // Optional: Show the very first starting point bubble before moving
+  updateInfoBubble({ lat: coords[0][0], lng: coords[0][1] }, `Starting at: ${coords[0][2]}`);
+  await new Promise(r => setTimeout(r, 1500));
 
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
     const end = coords[i + 1];
     
-    updateInfoBubble({ lat: start[0], lng: start[1] }, start[2]);
-    await new Promise(r => setTimeout(r, 1000));
+    // CHANGE: Show the NEXT destination bubble as the car starts driving toward it
+    updateInfoBubble({ lat: end[0], lng: end[1] }, `Next: ${end[2]}`);
+
+    // Drive the segment
     await animateDrivingSegment(start, end, 5);
+
+    // Optional: Small pause upon arrival at the destination
+    await new Promise(r => setTimeout(r, 800));
   }
 
+  // Final State: Change bubble text to show arrival
   const last = coords[coords.length - 1];
-  updateInfoBubble({ lat: last[0], lng: last[1] }, last[2]);
+  updateInfoBubble({ lat: last[0], lng: last[1] }, `Arrived at: ${last[2]}`);
 }
 
 function animateDrivingSegment(startCoord, endCoord, speed) {
@@ -155,11 +166,23 @@ function growLineSegments(points, speed, onComplete) {
   animate();
 }
 
+/**
+ * Update Bubble Behaviour
+ * Added a small vertical offset so the bubble doesn't sit directly on the coordinate
+ */
 function updateInfoBubble(pos, text) {
   if (currentBubble) ui.removeBubble(currentBubble);
+  
   currentBubble = new H.ui.InfoBubble(pos, {
-    content: `<div style="padding:5px; font-weight:bold; color:black;">${text}</div>`
+    content: `
+      <div style="padding:10px; min-width:150px; color:black;">
+        <div style="font-size:12px; color:#666; margin-bottom:4px;">Travel Log</div>
+        <div style="font-weight:bold; font-size:14px;">${text}</div>
+      </div>`,
+    // Offset helps visibility while the line is drawing underneath
+    offset: { x: 0, y: -30 } 
   });
+  
   ui.addBubble(currentBubble);
 }
 
