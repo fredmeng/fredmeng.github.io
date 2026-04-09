@@ -142,7 +142,7 @@ async function startJourney() {
     await new Promise(r => setTimeout(r, 1500));
 
     // 4. Drive the route segment
-    await animateDrivingSegment(start, end, 1);
+    await animateDrivingSegment(start, end, 0);
   }
 }
 
