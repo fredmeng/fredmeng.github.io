@@ -173,7 +173,7 @@ function animateDrivingSegment(startCoord, endCoord, speed) {
 
 function growLineSegments(points, speed, onComplete) {
   let i = 0;
-  const pointsPerFrame = 7; // The "Sweet Spot" for speed and smoothness
+  const pointsPerFrame = 10; // The "Sweet Spot" for speed and smoothness
   const segmentGroup = new H.map.Group();
   map.addObject(segmentGroup);
 
