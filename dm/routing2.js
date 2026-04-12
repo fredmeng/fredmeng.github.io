@@ -173,13 +173,18 @@ function animateDrivingSegment(startCoord, endCoord, speed) {
 
 function growLineSegments(points, speed, onComplete) {
   let i = 0;
+  const pointsPerFrame = 15; // The "Sweet Spot" for speed and smoothness
   const segmentGroup = new H.map.Group();
   map.addObject(segmentGroup);
 
   function animate() {
-    if (i < points.length - 1) {
+    let pointsProcessedThisFrame = 0;
+
+    // Process a batch of points in one go
+    while (pointsProcessedThisFrame < pointsPerFrame && i < points.length - 1) {
       const p1 = points[i];
       const p2 = points[i + 1];
+      
       const stepLS = new H.geo.LineString();
       stepLS.pushPoint(p1);
       stepLS.pushPoint(p2);
@@ -189,14 +194,22 @@ function growLineSegments(points, speed, onComplete) {
       });
 
       segmentGroup.addObject(stepPoly);
-      map.setCenter(p2);
       i++;
-      setTimeout(animate, speed);
+      pointsProcessedThisFrame++;
+    }
+
+    if (i < points.length - 1) {
+      // Still more to draw? Center the map on the current "lead" and go to next frame
+      map.setCenter(points[i]);
+      requestAnimationFrame(animate);
     } else {
+      // We are done! Final center and resolve
+      map.setCenter(points[points.length - 1]);
       onComplete();
     }
   }
-  animate();
+  
+  requestAnimationFrame(animate);
 }
 
 /**
