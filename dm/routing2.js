@@ -81,19 +81,33 @@ function navMenu() {
   }
 }
 
-function addDestinationPin(pos, text) {
-  // Half-size pin (16x16)
+function addDestinationPin(pos, text, htmlContent) {
   const icon = new H.map.Icon('https://latitude900.com/shared/pin.png', {
     size: { w: 16, h: 16 },
     anchor: { x: 8, y: 16 }
   });
 
   const marker = new H.map.Marker(pos, { icon: icon });
-  marker.setData(text);
+  
+  // Store the HTML string in the marker's data
+  // If htmlContent is provided, use it; otherwise, fall back to the plain text
+  marker.setData(htmlContent || `<div style="font-weight:bold;">${text}</div>`);
 
-  // Manual click listener
   marker.addEventListener('tap', (evt) => {
-    showTempBubble(evt.target.getGeometry(), evt.target.getData());
+    if (currentBubble) ui.removeBubble(currentBubble);
+
+    currentBubble = new H.ui.InfoBubble(evt.target.getGeometry(), {
+      content: evt.target.getData() // This now renders as HTML
+    });
+    ui.addBubble(currentBubble);
+    
+    // Auto-close after 3 seconds as per previous requirement
+    setTimeout(() => {
+      if (currentBubble) {
+        ui.removeBubble(currentBubble);
+        currentBubble = null;
+      }
+    }, 3000);
   });
 
   map.addObject(marker);
@@ -121,28 +135,39 @@ function showTempBubble(pos, text) {
 /**
  * 4. ANIMATION ENGINE
  */
+/**
+ * ANIMATION ENGINE
+ * Handles the drop of pins and the driving animation sequence.
+ * Expects coords to be structured as: [lat, lng, name, htmlContent]
+ */
 async function startJourney() {
-  document.getElementById('start-btn').style.display = 'none';
+  const btn = document.getElementById('start-btn');
+  if (btn) btn.style.display = 'none';
 
-  // Drop the very first pin and show its name
-  addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
-  showTempBubble({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
+  // 1. Show the starting point (Index 0)
+  // We pass coords[0][2] as text and coords[0][3] as the HTML content
+  addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2], coords[0][3]);
+  showTempBubble({ lat: coords[0][0], lng: coords[0][1] }, coords[0][3] || `Starting at: ${coords[0][2]}`);
 
+  // 2. Loop through the trip segments
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
     const end = coords[i + 1];
     
-    // 1. Drop the NEXT pin immediately
-    addDestinationPin({ lat: end[0], lng: end[1] }, end[2]);
+    // 3. Drop the NEXT destination pin
+    // Note: We use end[3] for the HTML content of the next destination
+    addDestinationPin({ lat: end[0], lng: end[1] }, end[2], end[3]);
     
-    // 2. Show the "Next" destination bubble (auto-closes in 3s)
-    showTempBubble({ lat: end[0], lng: end[1] }, `Next: ${end[2]}`);
+    // 4. Show the bubble for the NEXT destination automatically
+    // If no HTML is provided in the array, it defaults to a standard "Next:" string
+    const bubbleContent = end[3] || `Next: ${end[2]}`;
+    showTempBubble({ lat: end[0], lng: end[1] }, bubbleContent);
     
-    // 3. Brief pause to read before driving
+    // 5. Brief pause so the user sees the pin and the bubble before driving
     await new Promise(r => setTimeout(r, 1500));
 
-    // 4. Drive the route segment
-    await animateDrivingSegment(start, end, 1);
+    // 6. Drive to the next town
+    await animateDrivingSegment(start, end, 5);
   }
 }
 
