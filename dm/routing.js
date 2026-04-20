@@ -20,7 +20,7 @@ function loadDataset() {
  * 2. GLOBAL VARIABLES & INITIALIZATION
  */
 var platform, defaultLayers, map, behavior, ui, currentBubble;
-var isJourneyRunning = false; // Prevents double-clicks
+var isJourneyRunning = false; 
 
 async function init() {
   try {
@@ -61,32 +61,50 @@ function addDestinationPin(pos, text) {
   });
   const marker = new H.map.Marker(pos, { icon: icon });
   marker.setData(text);
-  marker.addEventListener('tap', (evt) => showBubble(evt.target.getGeometry(), evt.target.getData()));
+  // Manual clicks on pins are always permanent until closed
+  marker.addEventListener('tap', (evt) => showBubble(evt.target.getGeometry(), evt.target.getData(), null));
   map.addObject(marker);
 }
 
-// Displays a bubble that stays open until closed manually or replaced
-function showBubble(pos, text) {
+/**
+ * Enhanced Bubble Function
+ * @param {Object} pos - Map coordinates
+ * @param {String} text - Content
+ * @param {Number} duration - (Optional) Time in ms to auto-close. If null, stays open.
+ */
+function showBubble(pos, text, duration = null) {
   if (currentBubble) ui.removeBubble(currentBubble);
+  
   currentBubble = new H.ui.InfoBubble(pos, {
     content: `<div style="padding:10px; font-weight:bold; color:black;">${text}</div>`
   });
+  
   ui.addBubble(currentBubble);
+
+  if (duration) {
+    setTimeout(() => {
+      // Only remove if this bubble is still the 'current' one
+      if (currentBubble) {
+        ui.removeBubble(currentBubble);
+        currentBubble = null;
+      }
+    }, duration);
+  }
 }
 
 /**
  * 4. ANIMATION ENGINE
  */
 async function startJourney() {
-  if (isJourneyRunning) return; // Prevent double-clicks
+  if (isJourneyRunning) return;
   isJourneyRunning = true;
   
   document.getElementById('start-btn').style.display = 'none';
   let totalDistance = 0;
 
-  // Drop first pin
+  // Initial Pin (Display for 2 seconds)
   addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
-  showBubble({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
+  showBubble({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2], 2000);
 
   for (let i = 0; i < coords.length - 1; i++) {
     const start = coords[i];
@@ -94,19 +112,20 @@ async function startJourney() {
     
     addDestinationPin({ lat: end[0], lng: end[1] }, end[2]);
     
-    // Drive and get distance
     const segmentKm = await animateDrivingSegment(start, end);
     totalDistance += parseFloat(segmentKm);
 
-    // Show persistent bubble
-    showBubble({ lat: end[0], lng: end[1] }, `${end[2]}<br><small>${segmentKm} km</small>`);
+    // Destination bubbles (Display for 2 seconds)
+    showBubble({ lat: end[0], lng: end[1] }, `${end[2]}<br><small>${segmentKm} km</small>`, 2000);
     
     await new Promise(r => setTimeout(r, 2000));
   }
 
-  // Final Total Display
-  showBubble({ lat: coords[coords.length - 1][0], lng: coords[coords.length - 1][1] }, 
-    `Total Trip 總里程數: ${totalDistance.toFixed(1)} km`);
+  // Final Total Display (NO duration passed = Stays open forever)
+  showBubble(
+    { lat: coords[coords.length - 1][0], lng: coords[coords.length - 1][1] }, 
+    `Total Trip 總里程數: ${totalDistance.toFixed(1)} km`
+  );
     
   isJourneyRunning = false;
 }
@@ -141,7 +160,7 @@ function animateDrivingSegment(startCoord, endCoord) {
 
 function growLineSegments(points, onComplete) {
   let i = 0;
-  const pointsPerFrame = 15; // Fast batching for smooth animation
+  const pointsPerFrame = 15;
   const segmentGroup = new H.map.Group();
   map.addObject(segmentGroup);
 
