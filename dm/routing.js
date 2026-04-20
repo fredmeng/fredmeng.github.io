@@ -96,14 +96,14 @@ async function startJourney() {
     // 3. Show bubble with distance
     showTempBubble({ lat: end[0], lng: end[1] }, `${end[2]}<br><small>${segmentKm} km</small>`);
     
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 3000));
   }
 
   // Final Total Display
   setTimeout(() => {
     showTempBubble({ lat: coords[coords.length - 1][0], lng: coords[coords.length - 1][1] }, 
-    `Total Trip: ${totalDistance.toFixed(1)} km`);
-  }, 2000);
+    `Total Trip 總里程數: ${totalDistance.toFixed(1)} km`);
+  }, 20000);
 }
 
 function animateDrivingSegment(startCoord, endCoord) {
