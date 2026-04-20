@@ -102,8 +102,8 @@ async function startJourney() {
   // Final Total Display
   setTimeout(() => {
     showTempBubble({ lat: coords[coords.length - 1][0], lng: coords[coords.length - 1][1] }, 
-    `Total Trip 總里程數: ${totalDistance.toFixed(1)} km`);
-  }, 20000);
+    `Total Trip: ${totalDistance.toFixed(1)} km`);
+  }, 10000);
 }
 
 function animateDrivingSegment(startCoord, endCoord) {
