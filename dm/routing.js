@@ -141,8 +141,15 @@ function animateDrivingSegment(startCoord, endCoord) {
       'return': 'polyline,summary'
     };
 
+    // Define what happens on failure (network error or no route found)
+    const runFallback = () => {
+      console.warn("Routing failed, using straight-line fallback.");
+      const fallbackPoints = getStraightLinePath(startCoord, endCoord);
+      growLineSegments(fallbackPoints, () => resolve("N/A")); // "N/A" indicates estimation
+    };
+
     router.calculateRoute(params, (result) => {
-      if (result.routes && result.routes.length) {
+      if (result.routes && result.routes.length > 0) {
         const section = result.routes[0].sections[0];
         const distanceKm = (section.summary.length / 1000).toFixed(1);
         
@@ -152,9 +159,13 @@ function animateDrivingSegment(startCoord, endCoord) {
         
         growLineSegments(points, () => resolve(distanceKm));
       } else {
-        resolve(0);
+        // No routes returned
+        runFallback();
       }
-    }, () => resolve(0));
+    }, () => {
+      // API call failed
+      runFallback();
+    });
   });
 }
 
@@ -189,6 +200,18 @@ function growLineSegments(points, onComplete) {
     }
   }
   requestAnimationFrame(animate);
+}
+
+// Generates a simple straight-line path between two points (50 segments)
+function getStraightLinePath(start, end) {
+  const points = [];
+  const steps = 50;
+  for (let i = 0; i <= steps; i++) {
+    const lat = start[0] + (end[0] - start[0]) * (i / steps);
+    const lng = start[1] + (end[1] - start[1]) * (i / steps);
+    points.push({ lat, lng });
+  }
+  return points;
 }
 
 /**
