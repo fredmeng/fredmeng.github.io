@@ -8,6 +8,7 @@ const coords = [
   [-32.5628, 151.1739, "Singleton 辛格爾頓"],
   [-30.9833, 150.2500, "Gunnedah 根尼達"],
   [-30.3333, 149.7833, "Narrabri 納拉布賴"],
+  [-30.3321, 149.5734, "Australia Telescope Compact Array 澳洲望遠鏡陣列"],
   [-29.4261, 147.9786, "Lightning Ridge 閃電嶺"],
   [-30.94718, 148.27155, "Coonamble 庫納姆布林"],
   [-32.5900, 149.5800, "Mudgee 馬奇"],
