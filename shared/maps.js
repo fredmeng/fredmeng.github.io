@@ -1,32 +1,3 @@
-function drawLinesSequentially2(coords, delay = 1500) {
-  let index = 0;
-
-  function drawNextSegment() {
-    if (index < coords.length - 1) {
-      const start = { lat: coords[index][0], lng: coords[index][1] };
-      const end = { lat: coords[index + 1][0], lng: coords[index + 1][1] };
-
-      const lineString = new H.geo.LineString();
-      lineString.pushPoint(start);
-      lineString.pushPoint(end);
-
-      const polyline = new H.map.Polyline(lineString, {
-        style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
-      });
-
-      map.addObject(polyline);
-
-      // Pan the map to the new point
-      map.setCenter(end, true); // 'true' enables animation
-
-      index++;
-      setTimeout(drawNextSegment, delay);
-    }
-  }
-
-  drawNextSegment();
-}
-
 function drawLinesSequentially(coords, delay = 1500) {
   let index = 0;
   let bubble = null;
@@ -36,6 +7,12 @@ function drawLinesSequentially(coords, delay = 1500) {
       const start = { lat: coords[index][0], lng: coords[index][1] };
       const end = { lat: coords[index + 1][0], lng: coords[index + 1][1] };
 
+      // Calculate distance for this segment
+      const segmentDist = calculateDistance(
+        coords[index][0], coords[index][1], 
+        coords[index + 1][0], coords[index + 1][1]
+      );
+
       const lineString = new H.geo.LineString();
       lineString.pushPoint(start);
       lineString.pushPoint(end);
@@ -45,20 +22,17 @@ function drawLinesSequentially(coords, delay = 1500) {
       });
 
       map.addObject(polyline);
-
-      // Smoothly pan to the new endpoint
       map.setCenter(end, true);
 
-      // Show location name near (not on) the line
       const locationName = coords[index + 1][2];
       if (locationName) {
-        // Remove previous bubble if any
         if (bubble) ui.removeBubble(bubble);
 
-        // Create a small upward offset (pixels)
+        // Include distance in the HTML string
         bubble = new H.ui.InfoBubble(end, {
-          content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>`,
-          offset: { x: 0, y: -25 }  // move the bubble up by 25px to avoid overlapping the line
+          content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>
+                    <div style="font-size:12px; color:#555;">Segment: ${segmentDist} km</div>`,
+          offset: { x: 0, y: -25 }
         });
         ui.addBubble(bubble);
       }
@@ -78,17 +52,6 @@ function drawLinesSequentially(coords, delay = 1500) {
   }
 
   drawNextSegment();
-}
-
-
-
-function navMenu() {
-  var x = document.getElementById("nav-links");
-  if (x.style.display === "block") {
-    x.style.display = "none";
-  } else {
-    x.style.display = "block";
-  }
 }
 
 function addMarkersAndSetViewBounds() {
@@ -197,3 +160,32 @@ var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
 
 // Create the default UI components
 var ui = H.ui.UI.createDefault(map, defaultLayers);
+
+document.getElementById("start-btn").addEventListener("click", () => {
+  // Start background music
+  const music = document.getElementById("bg-music");
+  music.volume = 0.3;
+  music.play().then(() => {
+    console.log("Music started");
+  }).catch((err) => {
+    console.error("Playback failed:", err);
+  });
+
+  // Hide the Start button
+  document.getElementById("start-btn").style.display = "none";
+
+  // Start drawing lines
+  drawLinesSequentially(coords, 1500);
+});
+
+// Calculates distance in kilometers between two points
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return (R * c).toFixed(1); // Returns string rounded to 1 decimal place
+}
