@@ -43,7 +43,7 @@ function drawLinesSequentially(coords, delay = 2000) {
         if (locationName) {
           bubble = new H.ui.InfoBubble(end, {
             content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>
-                      <div style="font-size:12px; color:#555;">Segment: ${segmentDist.toFixed(1)} km</div>`,
+                      <div style="font-size:12px; color:#555;">${segmentDist.toFixed(1)} km</div>`,
             offset: { x: 0, y: -25 }
           });
           ui.addBubble(bubble);
