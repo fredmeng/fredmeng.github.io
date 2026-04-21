@@ -1,17 +1,20 @@
-function drawLinesSequentially(coords, delay = 1500) {
+function drawLinesSequentially(coords, delay = 2000) {
   let index = 0;
   let bubble = null;
+  let totalDistance = 0; // Variable to accumulate total
 
   function drawNextSegment() {
     if (index < coords.length - 1) {
       const start = { lat: coords[index][0], lng: coords[index][1] };
       const end = { lat: coords[index + 1][0], lng: coords[index + 1][1] };
+      const locationName = coords[index + 1][2];
 
       // Calculate distance for this segment
       const segmentDist = calculateDistance(
         coords[index][0], coords[index][1], 
         coords[index + 1][0], coords[index + 1][1]
       );
+      totalDistance += segmentDist;
 
       const lineString = new H.geo.LineString();
       lineString.pushPoint(start);
@@ -20,21 +23,31 @@ function drawLinesSequentially(coords, delay = 1500) {
       const polyline = new H.map.Polyline(lineString, {
         style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
       });
-
       map.addObject(polyline);
       map.setCenter(end, true);
 
-      const locationName = coords[index + 1][2];
-      if (locationName) {
-        if (bubble) ui.removeBubble(bubble);
+      // Check if this is the last segment
+      const isLast = (index === coords.length - 2);
 
-        // Include distance in the HTML string
-        bubble = new H.ui.InfoBubble(end, {
-          content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>
-                    <div style="font-size:12px; color:#555;">Segment: ${segmentDist} km</div>`,
+      if (isLast) {
+        // --- FINAL BUBBLE (Persistent) ---
+        // Note: We create a new instance and do NOT clean up old ones
+        const finalBubble = new H.ui.InfoBubble(end, {
+          content: `<div style="font-weight:bold; font-size:14px; color: #007bff;">Total Distance: ${totalDistance.toFixed(1)} km</div>`,
           offset: { x: 0, y: -25 }
         });
-        ui.addBubble(bubble);
+        ui.addBubble(finalBubble);
+      } else {
+        // --- INTERMEDIATE BUBBLE (Transient) ---
+        if (bubble) ui.removeBubble(bubble);
+        if (locationName) {
+          bubble = new H.ui.InfoBubble(end, {
+            content: `<div style="font-weight:bold; font-size:14px;">${locationName}</div>
+                      <div style="font-size:12px; color:#555;">Segment: ${segmentDist.toFixed(1)} km</div>`,
+            offset: { x: 0, y: -25 }
+          });
+          ui.addBubble(bubble);
+        }
       }
 
       index++;
@@ -42,7 +55,7 @@ function drawLinesSequentially(coords, delay = 1500) {
     }
   }
 
-  // Show name of the first point initially
+  // Initial marker bubble
   if (coords[0][2]) {
     bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
       content: `<div style="font-weight:bold; font-size:14px;">${coords[0][2]}</div>`,
@@ -175,10 +188,9 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-btn").style.display = "none";
 
   // Start drawing lines
-  drawLinesSequentially(coords, 1500);
+  drawLinesSequentially(coords);
 });
 
-// Calculates distance in kilometers between two points
 function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -187,5 +199,5 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return (R * c).toFixed(1); // Returns string rounded to 1 decimal place
+  return (R * c); // Return raw number for summing
 }
