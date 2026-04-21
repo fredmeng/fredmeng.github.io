@@ -4,7 +4,7 @@
 function loadDataset() {
   return new Promise((resolve, reject) => {
     const urlParams = new URLSearchParams(window.location.search);
-    const dataFile = urlParams.get('dataset') || 'data_melbourne.js';
+    const dataFile = urlParams.get('dataset') || '2026_melbourne.js';
     
     const script = document.createElement('script');
     script.type = 'text/javascript';
