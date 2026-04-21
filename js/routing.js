@@ -8,7 +8,7 @@ function loadDataset() {
     
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `/dm/${dataFile}`;
+    script.src = `/data/${dataFile}`;
     
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(`Failed to load dataset: ${dataFile}`));
