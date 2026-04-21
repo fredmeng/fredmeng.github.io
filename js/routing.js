@@ -55,7 +55,7 @@ async function init() {
  * 3. UI HELPERS & PIN LOGIC
  */
 function addDestinationPin(pos, text) {
-  const icon = new H.map.Icon('https://latitude900.com/shared/pin.png', {
+  const icon = new H.map.Icon('https://latitude900.com/image/pin.png', {
     size: { w: 16, h: 16 },
     anchor: { x: 8, y: 16 }
   });
