@@ -135,17 +135,11 @@ async function startJourney() {
   isJourneyRunning = false;
 }
 
-/**
- * 4. ANIMATION ENGINE (Updated with Auto-Retry and Fallback)
- */
-function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
+function animateDrivingSegment(startCoord, endCoord) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
     
-    // Determine which mode to use for this attempt
-    // If forceMode is provided (from a retry), use it; otherwise use global travelMode
-    const modeToUse = forceMode || travelMode;
-
+    // Map internal names to HERE API transport modes
     const modeMapping = {
       'car': 'car',
       'walking': 'pedestrian',
@@ -156,57 +150,31 @@ function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
 
     const params = {
       'routingMode': 'fast',
-      'transportMode': modeMapping[modeToUse] || 'car',
+      'transportMode': modeMapping[travelMode] || 'car',
       'origin': `${startCoord[0]},${startCoord[1]}`,
       'destination': `${endCoord[0]},${endCoord[1]}`,
       'return': 'polyline,summary'
     };
 
-    // Last resort: If both cycling and walking fail, draw a straight line
     const runFallback = () => {
-      console.warn(`Routing failed for ${modeToUse}, using straight-line fallback.`);
+      console.warn("Routing failed, using straight-line fallback.");
       const fallbackPoints = getStraightLinePath(startCoord, endCoord);
-      // Ensure all 3 arguments are passed to avoid TypeError
-      growLineSegments(fallbackPoints, modeToUse, () => resolve("N/A"));
+      growLineSegments(fallbackPoints, () => resolve("N/A"));
     };
 
     router.calculateRoute(params, (result) => {
       if (result.routes && result.routes.length > 0) {
         const section = result.routes[0].sections[0];
-        const distanceMeters = section.summary.length;
-        
-        // LOGIC: If HERE snaps to a tiny distance (< 1km), it likely failed to find the road.
-        // If we aren't already trying pedestrian, retry once with pedestrian mode.
-        if (distanceMeters < 1000 && modeToUse !== 'pedestrian') {
-          console.log(`Segment too short (${distanceMeters}m). Retrying with pedestrian mode...`);
-          resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
-          return;
-        }
-
-        const distanceKm = (distanceMeters / 1000).toFixed(1);
+        const distanceKm = (section.summary.length / 1000).toFixed(1);
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
         const points = [];
         lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
         
-        // Successfully found a route; draw it
-        growLineSegments(points, modeToUse, () => resolve(distanceKm));
-      } else {
-        // If specific mode fails, try pedestrian as a backup before giving up
-        if (modeToUse !== 'pedestrian') {
-          resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
-        } else {
-          runFallback();
-        }
-      }
-    }, (error) => {
-      // API level error (e.g., 400 Bad Request because of road restrictions)
-      if (modeToUse !== 'pedestrian') {
-        console.warn("API Error, trying pedestrian mode retry...");
-        resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
+        growLineSegments(points, () => resolve(distanceKm));
       } else {
         runFallback();
       }
-    });
+    }, runFallback);
   });
 }
 
