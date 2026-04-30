@@ -135,11 +135,13 @@ async function startJourney() {
   isJourneyRunning = false;
 }
 
-function animateDrivingSegment(startCoord, endCoord) {
+function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
     
-    // Map internal names to HERE API transport modes
+    // Use forceMode if we are retrying, otherwise use the global travelMode
+    const modeToUse = forceMode || travelMode;
+
     const modeMapping = {
       'car': 'car',
       'walking': 'pedestrian',
@@ -150,31 +152,51 @@ function animateDrivingSegment(startCoord, endCoord) {
 
     const params = {
       'routingMode': 'fast',
-      'transportMode': modeMapping[travelMode] || 'car',
+      'transportMode': modeMapping[modeToUse] || 'car',
       'origin': `${startCoord[0]},${startCoord[1]}`,
       'destination': `${endCoord[0]},${endCoord[1]}`,
       'return': 'polyline,summary'
     };
 
     const runFallback = () => {
-      console.warn("Routing failed, using straight-line fallback.");
       const fallbackPoints = getStraightLinePath(startCoord, endCoord);
-      growLineSegments(fallbackPoints, () => resolve("N/A"));
+      growLineSegments(fallbackPoints, modeToUse, () => resolve("N/A"));
     };
 
     router.calculateRoute(params, (result) => {
       if (result.routes && result.routes.length > 0) {
         const section = result.routes[0].sections[0];
-        const distanceKm = (section.summary.length / 1000).toFixed(1);
+        const distanceMeters = section.summary.length;
+        
+        // CHECK: If distance is < 1km and we aren't already in pedestrian mode, retry.
+        if (distanceMeters < 1000 && modeToUse !== 'pedestrian') {
+          console.warn(`Distance too short (${distanceMeters}m). Retrying with pedestrian mode...`);
+          resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
+          return;
+        }
+
+        const distanceKm = (distanceMeters / 1000).toFixed(1);
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
         const points = [];
         lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
         
-        growLineSegments(points, () => resolve(distanceKm));
+        growLineSegments(points, modeToUse, () => resolve(distanceKm));
+      } else {
+        // If the route fails entirely, try pedestrian as a last resort before hard fallback
+        if (modeToUse !== 'pedestrian') {
+          resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
+        } else {
+          runFallback();
+        }
+      }
+    }, () => {
+      // On API Error, try pedestrian if we haven't yet
+      if (modeToUse !== 'pedestrian') {
+        resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
       } else {
         runFallback();
       }
-    }, runFallback);
+    });
   });
 }
 
