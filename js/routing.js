@@ -126,7 +126,7 @@ async function startJourney() {
   isJourneyRunning = false;
 }
 
-function animateDrivingSegment(startCoord, endCoord) {
+async function animateDrivingSegment(startCoord, endCoord) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
     
@@ -160,16 +160,25 @@ function animateDrivingSegment(startCoord, endCoord) {
     };
 
     (async () => {
-      // 1. Try Primary Mode
+      // 1. Try Primary Mode (from URL param)
       let section = await attemptRoute(modeMapping[travelMode] || 'car');
 
-      // 2. Retry with Pedestrian if route is short (< 50m) or failed
+      // 2. Retry with Pedestrian if Primary failed or is suspiciously short
       if (!section || section.summary.length < 50) {
         const pedestrianSection = await attemptRoute('pedestrian');
-        if (pedestrianSection) section = pedestrianSection;
+        if (pedestrianSection && pedestrianSection.summary.length >= 50) {
+          section = pedestrianSection;
+        }
       }
 
-      // 3. Drawing Logic with strict point validation
+      // 3. NEW: Final Retry with Car (only if current travelMode isn't already car)
+      if ((!section || section.summary.length < 50) && travelMode !== 'car') {
+        console.log("Pedestrian failed, retrying with car mode...");
+        const carRetrySection = await attemptRoute('car');
+        if (carRetrySection) section = carRetrySection;
+      }
+
+      // 4. Drawing Logic
       if (section && section.polyline) {
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
         const points = [];
