@@ -40,7 +40,7 @@ async function init() {
     defaultLayers = platform.createDefaultLayers();
     map = new H.Map(document.getElementById('map'), defaultLayers.vector.normal.map, {
       center: { lat: coords[0][0], lng: coords[0][1] },
-      zoom: 7,
+      zoom: 10,
       pixelRatio: window.devicePixelRatio || 1
     });
 
@@ -98,7 +98,7 @@ function showBubble(pos, text, duration = null) {
 }
 
 /**
- * 4. ANIMATION ENGINE
+ * 4. ANIMATION ENGINE (Updated with Retry Logic)
  */
 async function startJourney() {
   if (isJourneyRunning) return;
@@ -107,7 +107,6 @@ async function startJourney() {
   document.getElementById('start-btn').style.display = 'none';
   let totalDistance = 0;
 
-  // Initial Pin (Display for 2 seconds)
   addDestinationPin({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
   showBubble({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2], 2000);
 
@@ -117,16 +116,18 @@ async function startJourney() {
     
     addDestinationPin({ lat: end[0], lng: end[1] }, end[2]);
     
+    // The core logic change happens inside this function call
     const segmentKm = await animateDrivingSegment(start, end);
-    totalDistance += parseFloat(segmentKm);
-
-    // Destination bubbles (Display for 2 seconds)
-    showBubble({ lat: end[0], lng: end[1] }, `${end[2]}<br><small>${segmentKm} km</small>`, 2000);
     
+    // Add to total if it's a valid number
+    if (!isNaN(parseFloat(segmentKm))) {
+      totalDistance += parseFloat(segmentKm);
+    }
+
+    showBubble({ lat: end[0], lng: end[1] }, `${end[2]}<br><small>${segmentKm} km</small>`, 2000);
     await new Promise(r => setTimeout(r, 2000));
   }
 
-  // Final Total Display (NO duration passed = Stays open forever)
   showBubble(
     { lat: coords[coords.length - 1][0], lng: coords[coords.length - 1][1] }, 
     `Total Trip 總里程數: ${totalDistance.toFixed(1)} km`
@@ -139,7 +140,6 @@ function animateDrivingSegment(startCoord, endCoord) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
     
-    // Map internal names to HERE API transport modes
     const modeMapping = {
       'car': 'car',
       'walking': 'pedestrian',
@@ -148,23 +148,41 @@ function animateDrivingSegment(startCoord, endCoord) {
       'bicycle': 'bicycle'
     };
 
-    const params = {
-      'routingMode': 'fast',
-      'transportMode': modeMapping[travelMode] || 'car',
-      'origin': `${startCoord[0]},${startCoord[1]}`,
-      'destination': `${endCoord[0]},${endCoord[1]}`,
-      'return': 'polyline,summary'
+    // Helper to calculate specific routes
+    const attemptRoute = (mode) => {
+      return new Promise((innerResolve) => {
+        const params = {
+          'routingMode': 'fast',
+          'transportMode': mode,
+          'origin': `${startCoord[0]},${startCoord[1]}`,
+          'destination': `${endCoord[0]},${endCoord[1]}`,
+          'return': 'polyline,summary'
+        };
+
+        router.calculateRoute(params, (result) => {
+          if (result.routes && result.routes.length > 0) {
+            innerResolve(result.routes[0].sections[0]);
+          } else {
+            innerResolve(null);
+          }
+        }, () => innerResolve(null));
+      });
     };
 
-    const runFallback = () => {
-      console.warn("Routing failed, using straight-line fallback.");
-      const fallbackPoints = getStraightLinePath(startCoord, endCoord);
-      growLineSegments(fallbackPoints, () => resolve("N/A"));
-    };
+    // Execution Logic: Primary -> Pedestrian Retry -> Fallback
+    (async () => {
+      // 1. Try Primary Mode
+      let section = await attemptRoute(modeMapping[travelMode] || 'car');
+      
+      // 2. Retry with Pedestrian if route is short (< 1000 meters) or failed
+      if (!section || section.summary.length < 1000) {
+        console.log("Short distance or failed route detected. Retrying with pedestrian mode...");
+        const pedestrianSection = await attemptRoute('pedestrian');
+        if (pedestrianSection) section = pedestrianSection;
+      }
 
-    router.calculateRoute(params, (result) => {
-      if (result.routes && result.routes.length > 0) {
-        const section = result.routes[0].sections[0];
+      // 3. Draw Route or use Straight Line Fallback
+      if (section) {
         const distanceKm = (section.summary.length / 1000).toFixed(1);
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
         const points = [];
@@ -172,9 +190,11 @@ function animateDrivingSegment(startCoord, endCoord) {
         
         growLineSegments(points, () => resolve(distanceKm));
       } else {
-        runFallback();
+        console.warn("All HERE routing attempts failed. Using straight-line fallback.");
+        const fallbackPoints = getStraightLinePath(startCoord, endCoord);
+        growLineSegments(fallbackPoints, () => resolve("N/A"));
       }
-    }, runFallback);
+    })();
   });
 }
 
