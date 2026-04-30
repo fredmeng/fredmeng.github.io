@@ -149,68 +149,60 @@ function animateDrivingSegment(startCoord, endCoord) {
     };
 
     // Helper to calculate specific routes via HERE API
-    const attemptRoute = (mode) => {
-      return new Promise((innerResolve) => {
-        const params = {
-          'routingMode': 'fast',
-          'transportMode': mode,
-          'origin': `${startCoord[0]},${startCoord[1]}`,
-          'destination': `${endCoord[0]},${endCoord[1]}`,
-          'return': 'polyline,summary',
-          'departureTime': 'any'
-        };
-
-        router.calculateRoute(params, (result) => {
-          if (result.routes && result.routes.length > 0) {
-            innerResolve(result.routes[0].sections[0]);
-          } else {
-            innerResolve(null);
-          }
-        }, () => innerResolve(null));
-      });
+const attemptRoute = (mode) => {
+  return new Promise((innerResolve) => {
+    const params = {
+      'routingMode': 'fast',
+      'transportMode': mode,
+      'origin': `${startCoord[0]},${startCoord[1]}`,
+      'destination': `${endCoord[0]},${endCoord[1]}`,
+      'return': 'polyline,summary',
+      'spans': 'names' // Helps the engine identify the road segments better
     };
 
-    (async () => {
-      // 1. Try Primary Mode
-      let section = await attemptRoute(modeMapping[travelMode] || 'car');
-      
-      /**
-       * 2. Threshold Check (50 meters)
-       * If primary mode fails OR distance is < 50m, try Pedestrian
-       */
-      if (!section || section.summary.length < 50) {
-        console.log("Distance < 50m or route failed. Switching to pedestrian mode...");
-        const pedestrianSection = await attemptRoute('pedestrian');
-        
-        // Only override if pedestrian actually found a route
-        if (pedestrianSection) {
-          section = pedestrianSection;
-        } else {
-          // Explicitly nullify if pedestrian also fails
-          section = null; 
-        }
-      }
+    // If we are desperate (after car and pedestrian fail), 
+    // we use a "Light Truck" profile to bypass passenger car bans
+    if (mode === 'truck') {
+      params['vehicle[type]'] = 'straightTruck';
+      params['vehicle[grossWeight]'] = 3500; 
+    }
 
-      /**
-       * 3. Final Fallback
-       * If section is still null (Pedestrian failed), use Direct Line
-       */
-      if (section) {
-        const distanceKm = (section.summary.length / 1000).toFixed(1);
-        const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
-        const points = [];
-        lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
-        
-        growLineSegments(points, () => resolve(distanceKm));
-      } else {
-        console.warn("Pedestrian mode failed to draw lines. Triggering direct line solution.");
-        const fallbackPoints = getStraightLinePath(startCoord, endCoord);
-        
-        // Calculate haversine distance for the fallback so the UI isn't empty
-        const directDist = (getHaversineDistance(startCoord, endCoord)).toFixed(2);
-        growLineSegments(fallbackPoints, () => resolve(directDist));
-      }
-    })();
+    router.calculateRoute(params, 
+      res => innerResolve(res.routes?.[0]?.sections?.[0] || null),
+      () => innerResolve(null)
+    );
+  });
+};
+
+(async () => {
+  // Try 1: Preferred Mode
+  let section = await attemptRoute(modeMapping[travelMode] || 'car');
+
+  // Try 2: Pedestrian (if < 50m or failed)
+  if (!section || section.summary.length < 50) {
+    section = await attemptRoute('pedestrian');
+  }
+
+  // Try 3: Truck Mode (The "Force Route" option for difficult terrain like Suhua)
+  if (!section) {
+    console.log("Standard routing failed. Forcing Truck/Generic mode...");
+    section = await attemptRoute('truck');
+  }
+
+  // FINAL RENDER
+  if (section && section.polyline) {
+    const distanceKm = (section.summary.length / 1000).toFixed(1);
+    const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
+    const points = [];
+    lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
+    growLineSegments(points, () => resolve(distanceKm));
+  } else {
+    // If even 'truck' fails, the direct line is the only mathematical possibility
+    const fallbackPoints = getStraightLinePath(startCoord, endCoord);
+    const directDist = getHaversineDistance(startCoord, endCoord).toFixed(1);
+    growLineSegments(fallbackPoints, () => resolve(directDist));
+  }
+})();
   });
 }
 
