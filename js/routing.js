@@ -40,7 +40,7 @@ async function init() {
     defaultLayers = platform.createDefaultLayers();
     map = new H.Map(document.getElementById('map'), defaultLayers.vector.normal.map, {
       center: { lat: coords[0][0], lng: coords[0][1] },
-      zoom: 10,
+      zoom: 7,
       pixelRatio: window.devicePixelRatio || 1
     });
 
