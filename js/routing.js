@@ -148,7 +148,7 @@ function animateDrivingSegment(startCoord, endCoord) {
       'bicycle': 'bicycle'
     };
 
-    // Helper to calculate specific routes
+    // Helper to calculate specific routes via HERE API
     const attemptRoute = (mode) => {
       return new Promise((innerResolve) => {
         const params = {
@@ -169,19 +169,31 @@ function animateDrivingSegment(startCoord, endCoord) {
       });
     };
 
-    // Execution Logic: Primary -> Pedestrian Retry -> Fallback
     (async () => {
       // 1. Try Primary Mode
       let section = await attemptRoute(modeMapping[travelMode] || 'car');
       
-      // 2. Retry with Pedestrian if route is short (< 1000 meters) or failed
-      if (!section || section.summary.length < 1000) {
-        console.log("Short distance or failed route detected. Retrying with pedestrian mode...");
+      /**
+       * 2. Threshold Check (50 meters)
+       * If primary mode fails OR distance is < 50m, try Pedestrian
+       */
+      if (!section || section.summary.length < 50) {
+        console.log("Distance < 50m or route failed. Switching to pedestrian mode...");
         const pedestrianSection = await attemptRoute('pedestrian');
-        if (pedestrianSection) section = pedestrianSection;
+        
+        // Only override if pedestrian actually found a route
+        if (pedestrianSection) {
+          section = pedestrianSection;
+        } else {
+          // Explicitly nullify if pedestrian also fails
+          section = null; 
+        }
       }
 
-      // 3. Draw Route or use Straight Line Fallback
+      /**
+       * 3. Final Fallback
+       * If section is still null (Pedestrian failed), use Direct Line
+       */
       if (section) {
         const distanceKm = (section.summary.length / 1000).toFixed(1);
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
@@ -190,12 +202,27 @@ function animateDrivingSegment(startCoord, endCoord) {
         
         growLineSegments(points, () => resolve(distanceKm));
       } else {
-        console.warn("All HERE routing attempts failed. Using straight-line fallback.");
+        console.warn("Pedestrian mode failed to draw lines. Triggering direct line solution.");
         const fallbackPoints = getStraightLinePath(startCoord, endCoord);
-        growLineSegments(fallbackPoints, () => resolve("N/A"));
+        
+        // Calculate haversine distance for the fallback so the UI isn't empty
+        const directDist = (getHaversineDistance(startCoord, endCoord)).toFixed(2);
+        growLineSegments(fallbackPoints, () => resolve(directDist));
       }
     })();
   });
+}
+
+/**
+ * Optional Helper: Get physical distance for the straight-line fallback
+ */
+function getHaversineDistance(p1, p2) {
+  const R = 6371; // Earth radius in km
+  const dLat = (p2[0] - p1[0]) * Math.PI / 180;
+  const dLon = (p2[1] - p1[1]) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 function growLineSegments(points, onComplete) {
