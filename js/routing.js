@@ -135,11 +135,15 @@ async function startJourney() {
   isJourneyRunning = false;
 }
 
+/**
+ * 4. ANIMATION ENGINE (Updated with Auto-Retry and Fallback)
+ */
 function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
     
-    // Use forceMode if we are retrying, otherwise use the global travelMode
+    // Determine which mode to use for this attempt
+    // If forceMode is provided (from a retry), use it; otherwise use global travelMode
     const modeToUse = forceMode || travelMode;
 
     const modeMapping = {
@@ -158,8 +162,11 @@ function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
       'return': 'polyline,summary'
     };
 
+    // Last resort: If both cycling and walking fail, draw a straight line
     const runFallback = () => {
+      console.warn(`Routing failed for ${modeToUse}, using straight-line fallback.`);
       const fallbackPoints = getStraightLinePath(startCoord, endCoord);
+      // Ensure all 3 arguments are passed to avoid TypeError
       growLineSegments(fallbackPoints, modeToUse, () => resolve("N/A"));
     };
 
@@ -168,9 +175,10 @@ function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
         const section = result.routes[0].sections[0];
         const distanceMeters = section.summary.length;
         
-        // CHECK: If distance is < 1km and we aren't already in pedestrian mode, retry.
+        // LOGIC: If HERE snaps to a tiny distance (< 1km), it likely failed to find the road.
+        // If we aren't already trying pedestrian, retry once with pedestrian mode.
         if (distanceMeters < 1000 && modeToUse !== 'pedestrian') {
-          console.warn(`Distance too short (${distanceMeters}m). Retrying with pedestrian mode...`);
+          console.log(`Segment too short (${distanceMeters}m). Retrying with pedestrian mode...`);
           resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
           return;
         }
@@ -180,18 +188,20 @@ function animateDrivingSegment(startCoord, endCoord, forceMode = null) {
         const points = [];
         lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
         
+        // Successfully found a route; draw it
         growLineSegments(points, modeToUse, () => resolve(distanceKm));
       } else {
-        // If the route fails entirely, try pedestrian as a last resort before hard fallback
+        // If specific mode fails, try pedestrian as a backup before giving up
         if (modeToUse !== 'pedestrian') {
           resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
         } else {
           runFallback();
         }
       }
-    }, () => {
-      // On API Error, try pedestrian if we haven't yet
+    }, (error) => {
+      // API level error (e.g., 400 Bad Request because of road restrictions)
       if (modeToUse !== 'pedestrian') {
+        console.warn("API Error, trying pedestrian mode retry...");
         resolve(animateDrivingSegment(startCoord, endCoord, 'pedestrian'));
       } else {
         runFallback();
