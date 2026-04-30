@@ -77,10 +77,10 @@ function addMarkersAndSetViewBounds() {
   })
   map.addObject(group);
 
-  // get geo bounding box for the group and set it to the map
+  // Smoothly move to the new point without changing the zoom level automatically
   map.getViewModel().setLookAtData({
-    bounds: group.getBoundingBox()
-  });
+    position: end
+  }, true);
 }
 
 
