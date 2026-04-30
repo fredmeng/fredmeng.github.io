@@ -37,7 +37,9 @@ async function init() {
     }
 
     platform = new H.service.Platform({ apikey: window.apikey });
-    defaultLayers = platform.createDefaultLayers();
+    defaultLayers = platform.createDefaultLayers({
+    lg: 'zh-TW',
+    });
     map = new H.Map(document.getElementById('map'), defaultLayers.vector.normal.map, {
       center: { lat: coords[0][0], lng: coords[0][1] },
       zoom: 8, // Increased default zoom for better visibility
