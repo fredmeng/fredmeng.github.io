@@ -1,10 +1,15 @@
 /**
- * 1. DYNAMIC DATA LOADER
+ * 1. DYNAMIC DATA LOADER (Enhanced)
  */
+let travelMode = 'car'; // Global tracker for mode
+
 function loadDataset() {
   return new Promise((resolve, reject) => {
     const urlParams = new URLSearchParams(window.location.search);
     const dataFile = urlParams.get('dataset') || '2026_melbourne.js';
+    
+    // Get mode from URL: car, bicycle, pedestrian, or truck
+    travelMode = urlParams.get('mode') || 'car'; 
     
     const script = document.createElement('script');
     script.type = 'text/javascript';
@@ -133,45 +138,54 @@ async function startJourney() {
 function animateDrivingSegment(startCoord, endCoord) {
   return new Promise((resolve) => {
     const router = platform.getRoutingService(null, 8);
+    
+    // Map internal names to HERE API transport modes
+    const modeMapping = {
+      'car': 'car',
+      'walking': 'pedestrian',
+      'pedestrian': 'pedestrian',
+      'cycling': 'bicycle',
+      'bicycle': 'bicycle'
+    };
+
     const params = {
       'routingMode': 'fast',
-      'transportMode': 'car',
+      'transportMode': modeMapping[travelMode] || 'car',
       'origin': `${startCoord[0]},${startCoord[1]}`,
       'destination': `${endCoord[0]},${endCoord[1]}`,
       'return': 'polyline,summary'
     };
 
-    // Define what happens on failure (network error or no route found)
     const runFallback = () => {
       console.warn("Routing failed, using straight-line fallback.");
       const fallbackPoints = getStraightLinePath(startCoord, endCoord);
-      growLineSegments(fallbackPoints, () => resolve("N/A")); // "N/A" indicates estimation
+      growLineSegments(fallbackPoints, () => resolve("N/A"));
     };
 
     router.calculateRoute(params, (result) => {
       if (result.routes && result.routes.length > 0) {
         const section = result.routes[0].sections[0];
         const distanceKm = (section.summary.length / 1000).toFixed(1);
-        
         const lineString = H.geo.LineString.fromFlexiblePolyline(section.polyline);
         const points = [];
         lineString.eachLatLngAlt((lat, lng) => points.push({ lat, lng }));
         
         growLineSegments(points, () => resolve(distanceKm));
       } else {
-        // No routes returned
         runFallback();
       }
-    }, () => {
-      // API call failed
-      runFallback();
-    });
+    }, runFallback);
   });
 }
 
 function growLineSegments(points, onComplete) {
   let i = 0;
-  const pointsPerFrame = 15;
+  
+  // Dynamic speed: Faster for cars, slower for walking to feel "natural"
+  let pointsPerFrame = 15; 
+  if (travelMode === 'bicycle' || travelMode === 'cycling') pointsPerFrame = 8;
+  if (travelMode === 'pedestrian' || travelMode === 'walking') pointsPerFrame = 4;
+
   const segmentGroup = new H.map.Group();
   map.addObject(segmentGroup);
 
@@ -183,6 +197,7 @@ function growLineSegments(points, onComplete) {
       const stepLS = new H.geo.LineString();
       stepLS.pushPoint(p1);
       stepLS.pushPoint(p2);
+      
       const stepPoly = new H.map.Polyline(stepLS, {
         style: { lineWidth: 4, strokeColor: 'rgba(0, 128, 255, 0.7)' }
       });
