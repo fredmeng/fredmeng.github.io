@@ -156,7 +156,8 @@ function animateDrivingSegment(startCoord, endCoord) {
           'transportMode': mode,
           'origin': `${startCoord[0]},${startCoord[1]}`,
           'destination': `${endCoord[0]},${endCoord[1]}`,
-          'return': 'polyline,summary'
+          'return': 'polyline,summary',
+          'departureTime': 'any'
         };
 
         router.calculateRoute(params, (result) => {
