@@ -12,7 +12,7 @@ const initialCenter = { lat: coords[0][0], lng: coords[0][1] };
 const map = new H.Map(document.getElementById('map'),
     defaultLayers.vector.normal.map, {
         center: initialCenter,
-        zoom: 10,
+        zoom: 14,
         pixelRatio: window.devicePixelRatio || 1
     });
 
