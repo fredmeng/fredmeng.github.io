@@ -1,4 +1,4 @@
-// 2. MAP INITIALIZATION
+// 1. MAP INITIALIZATION
 const platform = new H.service.Platform({
     apikey: window.apikey || 'YOUR_HERE_API_KEY'
 });
@@ -13,11 +13,15 @@ const map = new H.Map(document.getElementById('map'),
         pixelRatio: window.devicePixelRatio || 1
     });
 
+// Enable interactions and UI
 const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
 const ui = H.ui.UI.createDefault(map, defaultLayers);
 
 window.addEventListener('resize', () => map.getViewPort().resize());
 
+/**
+ * Core Animation Function
+ */
 function drawLinesSequentially(coords, delay = 800) {
     let index = 0;
     let bubble = null;
@@ -33,55 +37,70 @@ function drawLinesSequentially(coords, delay = 800) {
             const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             totalDistance += segmentDist;
 
-            // --- ATOMIC VIEW UPDATE ---
-            // Determine target zoom: 8 for long jumps, 14 for city movement
+            // 1. Determine target zoom based on distance
             const targetZoom = segmentDist > 50 ? 8 : 14;
 
-            // setLookAtData changes center and zoom in one single animation frame
+            // 2. Completion Listener: Only draws the line AFTER the map settles
+            const onAnimationFinished = (evt) => {
+                if (evt.target.getAnimationState() === H.Map.AnimationState.END) {
+                    // Remove listener immediately so it doesn't fire again
+                    map.removeEventListener('animationstatechange', onAnimationFinished);
+
+                    // 3. Draw the line now that we are at the correct zoom/position
+                    const lineString = new H.geo.LineString();
+                    lineString.pushPoint(start);
+                    lineString.pushPoint(end);
+
+                    const polyline = new H.map.Polyline(lineString, {
+                        style: { lineWidth: 5, strokeColor: 'rgba(0, 128, 255, 0.8)' }
+                    });
+                    map.addObject(polyline);
+
+                    // 4. Update Info Bubbles
+                    handleBubbles(end, locationName, prevLocationName, index === coords.length - 2);
+
+                    // 5. Move to next point after the specified delay
+                    index++;
+                    setTimeout(drawNextSegment, delay);
+                }
+            };
+
+            // Attach listener and trigger the camera movement
+            map.addEventListener('animationstatechange', onAnimationFinished);
+            
             map.getViewModel().setLookAtData({
                 position: end,
                 zoom: targetZoom
-            }, true); // 'true' enables smooth animation
-
-            // --- DRAW POLYLINE ---
-            const lineString = new H.geo.LineString();
-            lineString.pushPoint(start);
-            lineString.pushPoint(end);
-
-            const polyline = new H.map.Polyline(lineString, {
-                style: { lineWidth: 5, strokeColor: 'rgba(0, 128, 255, 0.8)' }
-            });
-            map.addObject(polyline);
-
-            // --- BUBBLE LOGIC ---
-            const isLast = (index === coords.length - 2);
-            if (isLast) {
-                if (bubble) ui.removeBubble(bubble);
-                const finalBubble = new H.ui.InfoBubble(end, {
-                    content: `<div style="font-weight:bold; padding:10px;">Total Journey: ${totalDistance.toFixed(1)} km</div>`
-                });
-                ui.addBubble(finalBubble);
-                finalBubble.open();
-            } else {
-                if (bubble) ui.removeBubble(bubble);
-                if (locationName && locationName !== prevLocationName) {
-                    bubble = new H.ui.InfoBubble(end, {
-                        content: `<div style="font-weight:bold; padding:5px;">${locationName}</div>`
-                    });
-                    ui.addBubble(bubble);
-                    bubble.open();
-                }
-            }
-
-            index++;
-            
-            // Give extra time for the map to finish a massive jump zoom before the next move
-            const nextDelay = segmentDist > 50 ? 1500 : delay;
-            setTimeout(drawNextSegment, nextDelay);
+            }, true);
         }
     }
 
-    if (coords[0][2]) {
+    /**
+     * Helper to manage InfoBubbles
+     */
+    function handleBubbles(end, name, prevName, isLast) {
+        if (isLast) {
+            if (bubble) ui.removeBubble(bubble);
+            const finalBubble = new H.ui.InfoBubble(end, {
+                content: `<div style="font-weight:bold; padding:10px; font-size:14px; color:#007bff;">
+                            🏁 Total Journey: ${totalDistance.toFixed(1)} km
+                          </div>`
+            });
+            ui.addBubble(finalBubble);
+            finalBubble.open();
+        } else if (name && name !== prevName) {
+            // Only swap bubbles if the location name actually changes (city to city)
+            if (bubble) ui.removeBubble(bubble);
+            bubble = new H.ui.InfoBubble(end, {
+                content: `<div style="font-weight:bold; padding:5px;">${name}</div>`
+            });
+            ui.addBubble(bubble);
+            bubble.open();
+        }
+    }
+
+    // Show initial starting point
+    if (coords[0] && coords[0][2]) {
         bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
             content: `<div style="font-weight:bold; padding:5px;">${coords[0][2]}</div>`
         });
@@ -92,6 +111,9 @@ function drawLinesSequentially(coords, delay = 800) {
     drawNextSegment();
 }
 
+/**
+ * Harversine Distance Formula (km)
+ */
 function calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -102,7 +124,16 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+// UI Trigger
 document.getElementById("start-btn").addEventListener("click", () => {
     document.getElementById("start-btn").style.display = "none";
+    
+    // Play music if exists
+    const music = document.getElementById("bg-music");
+    if (music) {
+        music.volume = 0.3;
+        music.play().catch(() => console.log("Audio blocked by browser."));
+    }
+
     drawLinesSequentially(coords);
 });
