@@ -25,7 +25,7 @@ window.addEventListener('resize', () => map.getViewPort().resize());
 
 /**
  * Core Animation Function
- * @param {Array} coords - The array of coordinates
+ * @param {Array} coords - The array of coordinates [lat, lng, name]
  * @param {Number} delay - Milliseconds between segments
  */
 function drawLinesSequentially(coords, delay = 800) {
@@ -43,12 +43,13 @@ function drawLinesSequentially(coords, delay = 800) {
             const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             totalDistance += segmentDist;
 
-            // --- DYNAMIC ZOOM LOGIC ---
-            // Automatically adjust zoom based on the length of the travel leg
-            if (segmentDist < 5) {
-                map.setZoom(14, true); 
-            } else if (segmentDist > 50) {
+            // --- SIMPLIFIED ZOOM LOGIC ---
+            // If the leg is long (>50km), zoom out to see the scale.
+            // Otherwise, zoom in for detail. This fixes the "stuck" zoom issue.
+            if (segmentDist > 50) {
                 map.setZoom(8, true);
+            } else {
+                map.setZoom(14, true);
             }
 
             const lineString = new H.geo.LineString();
@@ -60,6 +61,8 @@ function drawLinesSequentially(coords, delay = 800) {
             });
             
             map.addObject(polyline);
+            
+            // Move map to the destination of this segment
             map.setCenter(end, true);
 
             const isLast = (index === coords.length - 2);
@@ -77,7 +80,7 @@ function drawLinesSequentially(coords, delay = 800) {
                 if (bubble) ui.removeBubble(bubble);
 
                 // --- ANTI-FLICKER LOGIC ---
-                // Only create a new bubble if the name has changed (e.g. moving between cities)
+                // Only create a new bubble if the name has changed
                 if (locationName && locationName !== prevLocationName) {
                     bubble = new H.ui.InfoBubble(end, {
                         content: `<div style="font-weight:bold; padding:5px;">${locationName}</div>`
@@ -122,7 +125,7 @@ document.getElementById("start-btn").addEventListener("click", () => {
     const music = document.getElementById("bg-music");
     
     if (music) {
-        music.volume = 0.3; // Balanced background volume
+        music.volume = 0.3; 
         music.play().then(() => {
             console.log("Audio playback started.");
         }).catch((err) => {
