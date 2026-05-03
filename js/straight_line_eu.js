@@ -18,6 +18,9 @@ const ui = H.ui.UI.createDefault(map, defaultLayers);
 
 window.addEventListener('resize', () => map.getViewPort().resize());
 
+/**
+ * Core Animation Function
+ */
 function drawLinesSequentially(coords, delay = 800) {
     let index = 0;
     let bubble = null;
@@ -30,18 +33,19 @@ function drawLinesSequentially(coords, delay = 800) {
             const locationName = coords[index + 1][2];
             const prevLocationName = coords[index][2];
 
+            // 1. ALWAYS CALCULATE DISTANCE FIRST
             const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             totalDistance += segmentDist;
 
-            // --- OPTIMIZED ZOOM LOGIC ---
-            // Determine what the zoom SHOULD be
+            // 2. DECIDE ZOOM LEVEL IMMEDIATELY
             const targetZoom = segmentDist > 50 ? 8 : 14;
-            
-            // Only update zoom if it differs from current state to prevent animation spam
-            if (Math.round(map.getZoom()) !== targetZoom) {
-                map.setZoom(targetZoom, true);
-            }
 
+            // 3. APPLY ZOOM AND CENTER SIMULTANEOUSLY
+            // We use setLookAtData or setOptions to ensure the map processes the change as one atomic movement
+            map.setZoom(targetZoom, true);
+            map.setCenter(end, true);
+
+            // 4. DRAW THE LINE
             const lineString = new H.geo.LineString();
             lineString.pushPoint(start);
             lineString.pushPoint(end);
@@ -49,10 +53,9 @@ function drawLinesSequentially(coords, delay = 800) {
             const polyline = new H.map.Polyline(lineString, {
                 style: { lineWidth: 5, strokeColor: 'rgba(0, 128, 255, 0.8)' }
             });
-            
             map.addObject(polyline);
-            map.setCenter(end, true);
 
+            // 5. MANAGE BUBBLES
             const isLast = (index === coords.length - 2);
 
             if (isLast) {
@@ -63,26 +66,27 @@ function drawLinesSequentially(coords, delay = 800) {
                               </div>`
                 });
                 ui.addBubble(finalBubble);
-                finalBubble.open(); // CRITICAL: This makes the bubble appear
+                finalBubble.open();
             } else {
                 if (bubble) ui.removeBubble(bubble);
-
-                // Only show bubble if the name changed (e.g., entering a new city)
                 if (locationName && locationName !== prevLocationName) {
                     bubble = new H.ui.InfoBubble(end, {
                         content: `<div style="font-weight:bold; padding:5px;">${locationName}</div>`
                     });
                     ui.addBubble(bubble);
-                    bubble.open(); // CRITICAL: This makes the bubble appear
+                    bubble.open();
                 }
             }
 
             index++;
-            setTimeout(drawNextSegment, delay);
+            // If we just did a big jump (zoom out), we give the map a tiny bit more time 
+            // to settle before the next small street-level movement
+            const adjustedDelay = segmentDist > 50 ? delay + 500 : delay;
+            setTimeout(drawNextSegment, adjustedDelay);
         }
     }
 
-    // Starting point bubble
+    // Initial bubble
     if (coords[0][2]) {
         bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
             content: `<div style="font-weight:bold; padding:5px;">${coords[0][2]}</div>`
