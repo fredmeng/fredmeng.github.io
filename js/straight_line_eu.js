@@ -18,9 +18,6 @@ const ui = H.ui.UI.createDefault(map, defaultLayers);
 
 window.addEventListener('resize', () => map.getViewPort().resize());
 
-/**
- * Core Animation Function
- */
 function drawLinesSequentially(coords, delay = 800) {
     let index = 0;
     let bubble = null;
@@ -33,19 +30,20 @@ function drawLinesSequentially(coords, delay = 800) {
             const locationName = coords[index + 1][2];
             const prevLocationName = coords[index][2];
 
-            // 1. ALWAYS CALCULATE DISTANCE FIRST
             const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             totalDistance += segmentDist;
 
-            // 2. DECIDE ZOOM LEVEL IMMEDIATELY
+            // --- ATOMIC VIEW UPDATE ---
+            // Determine target zoom: 8 for long jumps, 14 for city movement
             const targetZoom = segmentDist > 50 ? 8 : 14;
 
-            // 3. APPLY ZOOM AND CENTER SIMULTANEOUSLY
-            // We use setLookAtData or setOptions to ensure the map processes the change as one atomic movement
-            map.setZoom(targetZoom, true);
-            map.setCenter(end, true);
+            // setLookAtData changes center and zoom in one single animation frame
+            map.getViewModel().setLookAtData({
+                position: end,
+                zoom: targetZoom
+            }, true); // 'true' enables smooth animation
 
-            // 4. DRAW THE LINE
+            // --- DRAW POLYLINE ---
             const lineString = new H.geo.LineString();
             lineString.pushPoint(start);
             lineString.pushPoint(end);
@@ -55,15 +53,12 @@ function drawLinesSequentially(coords, delay = 800) {
             });
             map.addObject(polyline);
 
-            // 5. MANAGE BUBBLES
+            // --- BUBBLE LOGIC ---
             const isLast = (index === coords.length - 2);
-
             if (isLast) {
                 if (bubble) ui.removeBubble(bubble);
                 const finalBubble = new H.ui.InfoBubble(end, {
-                    content: `<div style="font-weight:bold; padding:10px; font-size:14px; color:#007bff;">
-                                Total Journey: ${totalDistance.toFixed(1)} km
-                              </div>`
+                    content: `<div style="font-weight:bold; padding:10px;">Total Journey: ${totalDistance.toFixed(1)} km</div>`
                 });
                 ui.addBubble(finalBubble);
                 finalBubble.open();
@@ -79,14 +74,13 @@ function drawLinesSequentially(coords, delay = 800) {
             }
 
             index++;
-            // If we just did a big jump (zoom out), we give the map a tiny bit more time 
-            // to settle before the next small street-level movement
-            const adjustedDelay = segmentDist > 50 ? delay + 500 : delay;
-            setTimeout(drawNextSegment, adjustedDelay);
+            
+            // Give extra time for the map to finish a massive jump zoom before the next move
+            const nextDelay = segmentDist > 50 ? 1500 : delay;
+            setTimeout(drawNextSegment, nextDelay);
         }
     }
 
-    // Initial bubble
     if (coords[0][2]) {
         bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
             content: `<div style="font-weight:bold; padding:5px;">${coords[0][2]}</div>`
