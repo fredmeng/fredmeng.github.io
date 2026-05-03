@@ -37,59 +37,64 @@ function drawLinesSequentially(coords, delay = 800) {
             const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             totalDistance += segmentDist;
 
-            // 1. Determine target zoom based on distance
             const targetZoom = segmentDist > 50 ? 8 : 14;
 
-            // 2. Completion Listener: Only draws the line AFTER the map settles
-            const onAnimationFinished = (evt) => {
-                if (evt.target.getAnimationState() === H.Map.AnimationState.END) {
-                    // Remove listener immediately so it doesn't fire again
-                    map.removeEventListener('animationstatechange', onAnimationFinished);
+            // --- THE FIX: Animation Check ---
+            // Check if the map actually needs to move or zoom
+            const currentCenter = map.getCenter();
+            const isSamePosition = (Math.abs(currentCenter.lat - end.lat) < 0.00001 && 
+                                    Math.abs(currentCenter.lng - end.lng) < 0.00001);
+            const isSameZoom = Math.round(map.getZoom()) === targetZoom;
 
-                    // 3. Draw the line now that we are at the correct zoom/position
-                    const lineString = new H.geo.LineString();
-                    lineString.pushPoint(start);
-                    lineString.pushPoint(end);
+            const proceedWithDrawing = () => {
+                // Draw the line
+                const lineString = new H.geo.LineString();
+                lineString.pushPoint(start);
+                lineString.pushPoint(end);
 
-                    const polyline = new H.map.Polyline(lineString, {
-                        style: { lineWidth: 5, strokeColor: 'rgba(0, 128, 255, 0.8)' }
-                    });
-                    map.addObject(polyline);
+                const polyline = new H.map.Polyline(lineString, {
+                    style: { lineWidth: 5, strokeColor: 'rgba(0, 128, 255, 0.8)' }
+                });
+                map.addObject(polyline);
 
-                    // 4. Update Info Bubbles
-                    handleBubbles(end, locationName, prevLocationName, index === coords.length - 2);
+                // Handle Bubbles
+                handleBubbles(end, locationName, prevLocationName, index === coords.length - 2);
 
-                    // 5. Move to next point after the specified delay
-                    index++;
-                    setTimeout(drawNextSegment, delay);
-                }
+                index++;
+                setTimeout(drawNextSegment, delay);
             };
 
-            // Attach listener and trigger the camera movement
-            map.addEventListener('animationstatechange', onAnimationFinished);
-            
-            map.getViewModel().setLookAtData({
-                position: end,
-                zoom: targetZoom
-            }, true);
+            if (isSamePosition && isSameZoom) {
+                // Map is already there, don't wait for an event that won't fire
+                proceedWithDrawing();
+            } else {
+                // Map needs to move, wait for animation to end
+                const onAnimationFinished = (evt) => {
+                    if (evt.target.getAnimationState() === H.Map.AnimationState.END) {
+                        map.removeEventListener('animationstatechange', onAnimationFinished);
+                        proceedWithDrawing();
+                    }
+                };
+                map.addEventListener('animationstatechange', onAnimationFinished);
+
+                map.getViewModel().setLookAtData({
+                    position: end,
+                    zoom: targetZoom
+                }, true);
+            }
         }
     }
 
-    /**
-     * Helper to manage InfoBubbles
-     */
+    // Helper for bubbles (same as before)
     function handleBubbles(end, name, prevName, isLast) {
         if (isLast) {
             if (bubble) ui.removeBubble(bubble);
             const finalBubble = new H.ui.InfoBubble(end, {
-                content: `<div style="font-weight:bold; padding:10px; font-size:14px; color:#007bff;">
-                            🏁 Total Journey: ${totalDistance.toFixed(1)} km
-                          </div>`
+                content: `<div style="font-weight:bold; padding:10px;">Total Journey: ${totalDistance.toFixed(1)} km</div>`
             });
             ui.addBubble(finalBubble);
             finalBubble.open();
         } else if (name && name !== prevName) {
-            // Only swap bubbles if the location name actually changes (city to city)
             if (bubble) ui.removeBubble(bubble);
             bubble = new H.ui.InfoBubble(end, {
                 content: `<div style="font-weight:bold; padding:5px;">${name}</div>`
@@ -99,7 +104,7 @@ function drawLinesSequentially(coords, delay = 800) {
         }
     }
 
-    // Show initial starting point
+    // Starting point bubble
     if (coords[0] && coords[0][2]) {
         bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
             content: `<div style="font-weight:bold; padding:5px;">${coords[0][2]}</div>`
