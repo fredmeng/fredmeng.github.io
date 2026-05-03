@@ -1,4 +1,4 @@
-// 1. MAP INITIALIZATION (Standard)
+// 1. MAP INITIALIZATION
 const platform = new H.service.Platform({
     apikey: window.apikey || 'YOUR_HERE_API_KEY'
 });
@@ -19,13 +19,9 @@ async function drawLinesSequentially(coords, delay = 800) {
     let bubble = null;
     let totalDistance = 0;
 
-    // Show starting bubble
+    // Show initial starting bubble
     if (coords[0][2]) {
-        bubble = new H.ui.InfoBubble({ lat: coords[0][0], lng: coords[0][1] }, {
-            content: `<div style="font-weight:bold; padding:5px;">${coords[0][2]}</div>`
-        });
-        ui.addBubble(bubble);
-        bubble.open();
+        showAutoClosingBubble({ lat: coords[0][0], lng: coords[0][1] }, coords[0][2]);
     }
 
     while (index < coords.length - 1) {
@@ -37,17 +33,17 @@ async function drawLinesSequentially(coords, delay = 800) {
         const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
         totalDistance += segmentDist;
 
-        // 1. Determine Zoom
+        // 1. Determine Zoom (Binary: 8 for long jump, 14 for city)
         const targetZoom = segmentDist > 50 ? 8 : 14;
 
-        // 2. Move Camera and WAIT if it's a long jump
+        // 2. Move Camera
         map.getViewModel().setLookAtData({
             position: end,
             zoom: targetZoom
         }, true);
 
+        // If it's a long flight, wait longer for the "travel" animation
         if (segmentDist > 50) {
-            // Pause drawing for 1.5s to let the "flight" finish
             await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
@@ -60,26 +56,40 @@ async function drawLinesSequentially(coords, delay = 800) {
         });
         map.addObject(polyline);
 
-        // 4. Handle Bubbles
-        if (index === coords.length - 2) {
-            if (bubble) ui.removeBubble(bubble);
+        // 4. Handle Bubbles (City changes or Final destination)
+        const isLast = (index === coords.length - 2);
+        
+        if (isLast) {
+            // Final bubble stays open to show total distance
             const finalBubble = new H.ui.InfoBubble(end, {
-                content: `<div style="font-weight:bold; padding:10px;">Total Journey: ${totalDistance.toFixed(1)} km</div>`
+                content: `<div style="font-weight:bold; padding:10px;">🏁 Total Journey: ${totalDistance.toFixed(1)} km</div>`
             });
             ui.addBubble(finalBubble);
             finalBubble.open();
         } else if (locationName && locationName !== prevLocationName) {
-            if (bubble) ui.removeBubble(bubble);
-            bubble = new H.ui.InfoBubble(end, {
-                content: `<div style="font-weight:bold; padding:5px;">${locationName}</div>`
-            });
-            ui.addBubble(bubble);
-            bubble.open();
+            // New city reached: Show bubble that closes after 3 seconds
+            showAutoClosingBubble(end, locationName);
         }
 
         // 5. Standard delay between points
         await new Promise(resolve => setTimeout(resolve, delay));
         index++;
+    }
+
+    /**
+     * Helper to show a bubble and close it automatically
+     */
+    function showAutoClosingBubble(position, text) {
+        const tempBubble = new H.ui.InfoBubble(position, {
+            content: `<div style="font-weight:bold; padding:5px;">${text}</div>`
+        });
+        ui.addBubble(tempBubble);
+        tempBubble.open();
+
+        // Close and remove from map after 3000ms
+        setTimeout(() => {
+            ui.removeBubble(tempBubble);
+        }, 3000);
     }
 }
 
