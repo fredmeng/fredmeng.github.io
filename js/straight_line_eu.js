@@ -5,7 +5,7 @@ const platform = new H.service.Platform({
 const defaultLayers = platform.createDefaultLayers({ lg: 'zh' });
 const map = new H.Map(document.getElementById('map'), defaultLayers.vector.normal.map, {
     center: { lat: coords[0][0], lng: coords[0][1] },
-    zoom: 14,
+    zoom: 12,
     pixelRatio: window.devicePixelRatio || 1
 });
 const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
@@ -33,8 +33,8 @@ async function drawLinesSequentially(coords, delay = 800) {
         const segmentDist = calculateDistance(start.lat, start.lng, end.lat, end.lng);
         totalDistance += segmentDist;
 
-        // 1. Determine Zoom (Binary: 8 for long jump, 14 for city)
-        const targetZoom = segmentDist > 50 ? 8 : 14;
+        // 1. Determine Zoom (Binary: 8 for long jump, 12 for city)
+        const targetZoom = segmentDist > 50 ? 8 : 12;
 
         // 2. Move Camera
         map.getViewModel().setLookAtData({
