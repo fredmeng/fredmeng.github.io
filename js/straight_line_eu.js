@@ -46,9 +46,9 @@ function drawLinesSequentially(coords, delay = 800) {
             // --- DYNAMIC ZOOM LOGIC ---
             // Automatically adjust zoom based on the length of the travel leg
             if (segmentDist < 5) {
-                map.setZoom(10, true); 
+                map.setZoom(14, true); 
             } else if (segmentDist > 50) {
-                map.setZoom(6, true);
+                map.setZoom(8, true);
             }
 
             const lineString = new H.geo.LineString();
